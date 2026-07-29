@@ -156,7 +156,7 @@ const TestimoneChiave: React.FC<ScreenProps> = ({ setPage }) => {
             <VideoAccordion videoId="v0S-AkO1WOk" title="🎥 Video: Il Testimone Chiave" />
             
             <InfoBox>
-                <p>In questo test, scopriremo chi ha determinato il sigillo <strong>"{sigilloFinale || '(non definito)'}"</strong> all'età di <strong>{timeLine.etaEventoCausa || '(non definita)'}</strong>. Posizionati di fronte alla webcam e segui le istruzioni.</p>
+                <p>In questo test, scopriremo chi ha determinato il sigillo <strong>"{sigilloFinale || '(non definito)'}"</strong> all'età di <strong>{timeLine.etaEventoCausa || '(non definita)'}</strong>. Posizionati di fronte alla webcam all'interno della sagoma trasparente e segui le istruzioni.</p>
                 {!canStart && <p className="text-red-600 font-bold mt-2">Completa prima i test Sigilli e Time Line!</p>}
             </InfoBox>
 

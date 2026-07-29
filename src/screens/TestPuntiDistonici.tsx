@@ -148,7 +148,7 @@ const TestPuntiDistonici: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }
 
             <VideoAccordion videoId="JKC5t2boVK4" title="🎥 Video: Cosa sono i Punti Distonici?" />
 
-            <InfoBox><p>Posizionati di fronte alla webcam tra le due linee rosse. Questo test indaga le 4 aree della tua vita per identificare quella su cui lavorare.</p></InfoBox>
+            <InfoBox><p>Posizionati di fronte alla webcam all'interno della sagoma trasparente. Questo test indaga le 4 aree della tua vita per identificare quella su cui lavorare.</p></InfoBox>
             <div className="my-6">
                 <CameraView 
                     ref={cameraRef}

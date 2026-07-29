@@ -8,13 +8,14 @@ interface CameraViewProps {
   onError?: (error: string) => void;
   onCalibrated?: () => void;
   sensitivity?: number;
+  onVoiceGuide?: () => void;
 }
 
 export interface CameraViewRef {
   startCalibration: () => void;
 }
 
-const CameraView = React.forwardRef<CameraViewRef, CameraViewProps>(({ videoRef, onReady, onError, onCalibrated, sensitivity = 75 }, ref) => {
+const CameraView = React.forwardRef<CameraViewRef, CameraViewProps>(({ videoRef, onReady, onError, onCalibrated, sensitivity = 75, onVoiceGuide }, ref) => {
   const [error, setError] = useState<string | null>(null);
   const [detectedResult, setDetectedResult] = useState<'SI' | 'NO' | null>(null);
   const [depthInfo, setDepthInfo] = useState({ delta: 0, threshold: 0.05 });
@@ -299,15 +300,25 @@ const CameraView = React.forwardRef<CameraViewRef, CameraViewProps>(({ videoRef,
           </div>
         )}
 
-        {/* Pulsante Calibrazione */}
+        {/* Pulsante Calibrazione / Voce Guida */}
         <div className="flex justify-center">
-          <button 
-            onClick={handleCalibrate}
-            disabled={isCalibrating || !isReady}
-            className="px-6 py-2.5 bg-white/10 hover:bg-white/20 border border-white/10 disabled:opacity-30 text-white font-mono font-bold text-[10px] tracking-widest uppercase rounded-xl transition-all active:scale-95"
-          >
-            {isCalibrating ? 'Calibrazione...' : 'Calibra Posizione'}
-          </button>
+          {onVoiceGuide ? (
+            <button 
+              onClick={onVoiceGuide}
+              disabled={!isReady}
+              className="px-6 py-2.5 bg-indigo-600/90 hover:bg-indigo-500 border border-indigo-400/40 disabled:opacity-30 text-white font-mono font-bold text-[10px] tracking-widest uppercase rounded-xl transition-all active:scale-95 shadow-lg flex items-center gap-2"
+            >
+              🔊 Ascolta Voce Guida
+            </button>
+          ) : (
+            <button 
+              onClick={handleCalibrate}
+              disabled={isCalibrating || !isReady}
+              className="px-6 py-2.5 bg-white/10 hover:bg-white/20 border border-white/10 disabled:opacity-30 text-white font-mono font-bold text-[10px] tracking-widest uppercase rounded-xl transition-all active:scale-95"
+            >
+              {isCalibrating ? 'Calibrazione...' : 'Calibra Posizione'}
+            </button>
+          )}
         </div>
       </div>
 

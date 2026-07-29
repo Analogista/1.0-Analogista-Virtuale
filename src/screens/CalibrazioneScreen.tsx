@@ -70,6 +70,16 @@ const CalibrazioneScreen: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }
       }
   };
 
+  const playVoiceGuide = async () => {
+    try {
+      const nome = userData?.nome || "";
+      await voiceService.speak(`Poggia lo smartphone o il pc di fronte a te e mettiti in piedi. E' sufficiente che la telecamera inquadri il tuo busto, dalla vita alla testa. Questo test ci servirà per calibrare l'oscillazione del tuo corpo, in avanti o indietro. In alto trovi la barra per regolare la sensibilità di rilevazione della tua oscillazione. Prova a ripetere la calibrazione quante volte vuoi regolandola. Quando premerai il pulsante ci sarà un conto alla rovescia da 5 a 0 e congelerà la posizione inziale del tuo corpo. Nei test successivi potrai sempre ricalibrare la posizione. In basso puoi notare altra barra di colore nero che indicherà come rileva l'oscillazione del tuo corpo, se indietro, in avanti o neutra. Buona continuazione ${nome}.`);
+      setHasPlayedIntro(true);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const startCalibration = async () => {
     if (isLowLight) {
         alert("Attenzione: Luce insufficiente. Accendi una luce frontale per calibrare correttamente.");
@@ -146,7 +156,7 @@ const CalibrazioneScreen: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }
       {!isProMode && (
         <InfoBox>
           <div className="space-y-2 text-sm">
-              <p><strong>Configurazione Tecnica:</strong> Posizionati di fronte alla webcam a circa <strong>1,5 metri</strong>.</p>
+              <p><strong>Configurazione Tecnica:</strong> Posizionati di fronte alla webcam all'interno della sagoma trasparente, a circa <strong>1,5 metri</strong> di distanza.</p>
               <p>Il busto deve essere centrato nell'inquadratura.</p>
           </div>
         </InfoBox>
@@ -180,6 +190,7 @@ const CalibrazioneScreen: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }
                 onReady={handleCameraReady}
                 onCalibrated={handleCalibrated}
                 sensitivity={sensitivity}
+                onVoiceGuide={playVoiceGuide}
             />
          </div>
          

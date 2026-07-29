@@ -157,7 +157,7 @@ const TestNome: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }) => {
       <VideoAccordion videoId="AFtsyqyBdes" title="🎥 Video: Spiegazione Test del Nome" />
       
       <InfoBox>
-        <p>Posizionati di fronte alla webcam tra le due linee rosse. La voce guida ti chiederà di confermare il tuo nome e un nome falso. L'app rileverà la risposta del tuo inconscio.</p>
+        <p>Posizionati di fronte alla webcam all'interno della sagoma trasparente. La voce guida ti chiederà di confermare il tuo nome e un nome falso. L'app rileverà la risposta del tuo inconscio.</p>
       </InfoBox>
 
       <div className="my-6">

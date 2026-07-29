@@ -12,6 +12,7 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const [ndaAgreedLocal, setNdaAgreedLocal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [userDocExists, setUserDocExists] = useState(false);
+  const [existingRole, setExistingRole] = useState('user');
 
   useEffect(() => {
     let isMounted = true;
@@ -25,7 +26,11 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
         
         if (userSnap.exists()) {
           setUserDocExists(true);
-          if (userSnap.data().acceptedNDA === true) {
+          const data = userSnap.data();
+          if (data.role) {
+            setExistingRole(data.role);
+          }
+          if (data.acceptedNDA === true) {
             setHasAcceptedNDA(true);
           } else {
             setHasAcceptedNDA(false);
@@ -75,6 +80,7 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
           acceptedNDA: true, 
           ndaAcceptedAt: new Date().toISOString(),
           email: userEmail, // ensure email is present
+          role: existingRole, // Provide role to satisfy rules for legacy docs
           lastLogin: new Date().toISOString()
         }, { merge: true });
       }
@@ -165,25 +171,31 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) 
              <CheckCircle2 className="w-8 h-8" />
           </div>
           <h2 className="text-2xl font-bold text-slate-800 mb-2">Accordo di Riservatezza (NDA)</h2>
-          <p className="text-slate-600 mb-6 leading-relaxed">
+          <p className="text-slate-600 mb-2 leading-relaxed">
             Questo sistema è in fase Beta. I dati e le interazioni sono strettamente confidenziali. 
             Prima di procedere, è necessario accettare i termini di riservatezza e l'utilizzo per scopi di test.
           </p>
+          <p className="text-indigo-600 font-bold mb-6 text-sm flex items-center gap-2">
+            ⚠️ Per procedere, clicca nel quadratino qui sotto.
+          </p>
 
-          <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 mb-8">
+          <div className={`p-5 rounded-2xl border-2 transition-colors mb-8 ${ndaAgreedLocal ? 'bg-indigo-50 border-indigo-200' : 'bg-amber-50/50 border-amber-300 shadow-inner'}`}>
              <label className="flex items-start gap-4 cursor-pointer group">
-               <div className="relative flex items-center justify-center mt-0.5">
+               <div className="relative flex items-center justify-center mt-0.5 shrink-0">
                  <input 
                    type="checkbox" 
-                   className="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 transition-all cursor-pointer peer appearance-none checked:bg-indigo-600 checked:border-indigo-600"
+                   className="w-8 h-8 rounded-lg bg-white border-2 border-indigo-500 text-indigo-600 focus:ring-indigo-500 transition-all cursor-pointer peer appearance-none checked:bg-indigo-600 checked:border-indigo-600 group-hover:border-indigo-400 shadow-md"
                    checked={ndaAgreedLocal}
                    onChange={(e) => setNdaAgreedLocal(e.target.checked)}
                  />
-                 <svg className="absolute w-3.5 h-3.5 text-white pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                   <path d="M2.5 7.5L5.5 10.5L11.5 3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                 <svg className="absolute w-6 h-6 text-white pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                   <path d="M2.5 7.5L5.5 10.5L11.5 3.5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
                  </svg>
+                 {!ndaAgreedLocal && (
+                   <span className="absolute inset-0 rounded-lg ring-4 ring-amber-400/50 animate-pulse pointer-events-none"></span>
+                 )}
                </div>
-               <span className="text-sm text-slate-700 leading-relaxed font-medium group-hover:text-slate-900 transition-colors">
+               <span className="text-[15px] text-slate-800 leading-relaxed font-semibold group-hover:text-indigo-900 transition-colors">
                  Dichiaro di aver letto, compreso e di accettare i termini dell'Accordo di Riservatezza (NDA) e le condizioni di utilizzo in fase Beta.
                </span>
              </label>

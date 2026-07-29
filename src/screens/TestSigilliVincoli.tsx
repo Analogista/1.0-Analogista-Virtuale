@@ -170,7 +170,7 @@ const TestSigilliVincoli: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }
             <VideoAccordion videoId="jTXIaDt9G_M" title="🎥 Video: Cosa sono i Sigilli e i Vincoli?" />
 
             <InfoBox>
-                <p>Posizionati di fronte alla webcam. Identificheremo i sigilli (blocchi emotivi) legati al tuo punto distonico: <strong>{puntoDistonicoFinale || '(non definito)'}</strong>.</p>
+                <p>Posizionati di fronte alla webcam all'interno della sagoma trasparente. Identificheremo i sigilli (blocchi emotivi) legati al tuo punto distonico: <strong>{puntoDistonicoFinale || '(non definito)'}</strong>.</p>
                 {!puntoDistonicoFinale && <p className="text-red-600 font-bold mt-2">Completa prima il Test Punti Distonici!</p>}
             </InfoBox>
 
