@@ -54,7 +54,7 @@ const History: React.FC = () => {
         const querySnapshot = await getDocs(q);
         const fetchedSessions: SavedSession[] = [];
         querySnapshot.forEach((doc) => {
-          fetchedSessions.push({ id: doc.id, ...doc.data() } as SavedSession);
+          fetchedSessions.push({ id: doc.id, ...(doc.data() as any) } as SavedSession);
         });
         setSessions(fetchedSessions);
       } catch (error) {

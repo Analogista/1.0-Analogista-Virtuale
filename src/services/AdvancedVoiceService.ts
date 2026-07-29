@@ -24,6 +24,7 @@ export class AdvancedVoiceService {
     
     // Chiave dinamica iniettabile
     private dynamicApiKey: string | null = null;
+    private activeRejects: ((reason?: any) => void)[] = [];
 
     constructor() {
         this.synthesis = window.speechSynthesis;
@@ -220,7 +221,7 @@ export class AdvancedVoiceService {
 
                 setTimeout(() => {
                     if (!this.isPaused) {
-                        this.startResponseDetection(resolve);
+                        this.startResponseDetection(resolve, reject);
                     }
                 }, 500);
             };
@@ -228,7 +229,7 @@ export class AdvancedVoiceService {
         });
     }
 
-    private startResponseDetection(resolve: (value: AutomatedResponse) => void) {
+    private startResponseDetection(resolve: (value: AutomatedResponse) => void, reject: (reason?: any) => void) {
         this.motionDetector.startDetection();
         this.dispatchStatus('listening', 'Attendo una risposta (Oscilla SI/NO)...');
 
