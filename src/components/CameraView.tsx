@@ -26,7 +26,6 @@ const CameraView = React.forwardRef<CameraViewRef, CameraViewProps>(({ videoRef,
   const motionService = useRef<MotionDetectionService>(new MotionDetectionService());
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Sync sensitivity
   useEffect(() => {
     if (isReady && motionService.current) {
         motionService.current.setSensitivity(sensitivity);
@@ -93,7 +92,6 @@ const CameraView = React.forwardRef<CameraViewRef, CameraViewProps>(({ videoRef,
 
     const handleMovement = (event: any) => {
         if (event.detail.serviceId !== serviceId) return;
-
         const { direction } = event.detail;
         if (direction === 'forward') {
             setDetectedResult('SI');
@@ -102,7 +100,6 @@ const CameraView = React.forwardRef<CameraViewRef, CameraViewProps>(({ videoRef,
             setDetectedResult('NO');
             playFeedbackSound('negative');
         }
-        
         setTimeout(() => setDetectedResult(null), 1200);
     };
 
@@ -113,23 +110,19 @@ const CameraView = React.forwardRef<CameraViewRef, CameraViewProps>(({ videoRef,
 
     const handleLandmarks = (event: any) => {
         if (event.detail.serviceId !== serviceId) return;
-
         const canvas = canvasRef.current;
         const video = videoRef.current;
         if (!canvas || !video) return;
-        
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-
         const landmarks = event.detail.landmarks;
         if (!landmarks || landmarks.length < 13) return;
 
         const nose = landmarks[0];
         const leftShoulder = landmarks[11];
         const rightShoulder = landmarks[12];
-
         const midShoulderX = (leftShoulder.x + rightShoulder.x) / 2;
         const midShoulderY = (leftShoulder.y + rightShoulder.y) / 2;
 
@@ -156,7 +149,6 @@ const CameraView = React.forwardRef<CameraViewRef, CameraViewProps>(({ videoRef,
     window.addEventListener('landmarksProcessed', handleLandmarks);
 
     return () => {
-      // Access current via variable to safety
       const ms = motionService.current;
       ms?.stopDetection();
       if (videoRef.current?.srcObject) {
@@ -171,17 +163,14 @@ const CameraView = React.forwardRef<CameraViewRef, CameraViewProps>(({ videoRef,
 
   const handleCalibrate = () => {
     if (isCalibrating || !isReady) return;
-    
     setIsCalibrating(true);
     motionService.current?.stopDetection();
     setCountdown(5);
-    playCountdownSound(); // Suono per il "5"
+    playCountdownSound(); 
     
     const timer = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
-          // Quando scade l'ultimo secondo (da 1 a 0)
-          // Fermiamo il timer e scattiamo la calibrazione
           clearInterval(timer);
           setTimeout(() => {
             motionService.current?.startDetection();
@@ -189,7 +178,7 @@ const CameraView = React.forwardRef<CameraViewRef, CameraViewProps>(({ videoRef,
             setIsCalibrating(false);
             playFeedbackSound('positive');
             if (onCalibrated) onCalibrated();
-          }, 500); // Piccolo delay per mostrare lo "0" prima del feedback finale
+          }, 500); 
           return 0;
         }
         playCountdownSound();
@@ -208,24 +197,10 @@ const CameraView = React.forwardRef<CameraViewRef, CameraViewProps>(({ videoRef,
   return (
     <div className="relative w-full max-w-4xl h-[550px] mx-auto bg-[#0a0a0c] rounded-[2.5rem] overflow-hidden border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] flex flex-col justify-between">
       <div className="absolute inset-0 w-full h-full">
-        <video 
-          ref={videoRef} 
-          autoPlay 
-          playsInline 
-          muted 
-          className="w-full h-full object-cover transform -scale-x-100 grayscale-[20%] brightness-110" 
-        />
-
-        <canvas 
-          ref={canvasRef} 
-          className="absolute inset-0 w-full h-full pointer-events-none z-20 transform -scale-x-100" 
-        />
-        
+        <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover transform -scale-x-100 grayscale-[20%] brightness-110" />
+        <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-20 transform -scale-x-100" />
         <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10">
-          <img 
-            src="/assets/sagoma1-removebg-preview.png" 
-            alt="Guida Silhouette" 
-            className="h-[95%] w-auto object-contain opacity-40 grayscale brightness-125"
+          <img src="/assets/sagoma1-removebg-preview.png" alt="Guida Silhouette" className="h-[95%] w-auto object-contain opacity-40 grayscale brightness-125"
             onError={(e) => {
               const parent = e.currentTarget.parentElement;
               if (parent) {
@@ -236,13 +211,11 @@ const CameraView = React.forwardRef<CameraViewRef, CameraViewProps>(({ videoRef,
             }}
           />
           <svg id="silhouette-fallback" viewBox="0 0 200 300" className="h-[90%] w-auto hidden opacity-30">
-            <path d="M100,50 C80,50 70,70 70,90 C70,110 80,130 100,130 C120,130 130,110 130,90 C130,70 120,50 100,50 M70,140 C40,140 20,180 20,220 L20,300 L180,300 L180,220 C180,180 160,140 130,140 L70,140" 
-                  fill="none" stroke="white" strokeWidth="2" strokeDasharray="5,5" />
+            <path d="M100,50 C80,50 70,70 70,90 C70,110 80,130 100,130 C120,130 130,110 130,90 C130,70 120,50 100,50 M70,140 C40,140 20,180 20,220 L20,300 L180,300 L180,220 C180,180 160,140 130,140 L70,140" fill="none" stroke="white" strokeWidth="2" strokeDasharray="5,5" />
           </svg>
         </div>
       </div>
 
-      {/* Box superiore per lo stato (ATTESA/CALIBRAZIONE) */}
       <div className="absolute top-6 left-6 z-30 flex items-center gap-2">
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#0a0a0c]/80 border border-white/10 backdrop-blur-md">
           <div className={`w-2 h-2 rounded-full ${isCalibrating ? 'bg-amber-400 animate-pulse' : isReady ? 'bg-emerald-400 animate-pulse' : 'bg-red-500'}`} />
@@ -252,36 +225,25 @@ const CameraView = React.forwardRef<CameraViewRef, CameraViewProps>(({ videoRef,
         </div>
       </div>
 
-      {/* Overlay Risposte (SI/NO) */}
       {detectedResult && (
         <div className="absolute top-6 right-6 z-40 pointer-events-none transition-all duration-300">
           <div className={`px-6 py-2.5 rounded-2xl backdrop-blur-xl border-2 flex items-center justify-center min-w-[100px] shadow-2xl ${
-            detectedResult === 'SI' 
-              ? 'bg-[#4ade80]/20 border-[#4ade80] shadow-[0_0_30px_rgba(74,222,128,0.3)]' 
-              : 'bg-rose-500/20 border-rose-500 shadow-[0_0_30px_rgba(244,63,94,0.3)]'
+            detectedResult === 'SI' ? 'bg-[#4ade80]/20 border-[#4ade80]' : 'bg-rose-500/20 border-rose-500'
           }`}>
-            <span className={`text-3xl font-black italic tracking-tighter ${
-              detectedResult === 'SI' ? 'text-[#4ade80]' : 'text-rose-500'
-            }`}>
+            <span className={`text-3xl font-black italic tracking-tighter ${detectedResult === 'SI' ? 'text-[#4ade80]' : 'text-rose-500'}`}>
               {detectedResult}
             </span>
           </div>
         </div>
       )}
 
-      {/* Countdown Visivo Gigante (Richiesto Pro V2) */}
       {isCalibrating && (
         <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="text-cyan-400 text-xs font-black tracking-[0.5em] mb-8 uppercase animate-pulse">
-            Rimani Immobile
-          </div>
-          <div className="text-white text-[15rem] font-black leading-none drop-shadow-[0_0_50px_rgba(0,229,255,0.4)] animate-in zoom-in duration-300">
-            {countdown}
-          </div>
+          <div className="text-cyan-400 text-xs font-black tracking-[0.5em] mb-8 uppercase animate-pulse">Rimani Immobile</div>
+          <div className="text-white text-[15rem] font-black leading-none drop-shadow-[0_0_50px_rgba(0,229,255,0.4)]">{countdown}</div>
         </div>
       )}
 
-      {/* Barra di monitoraggio in tempo reale Pro V2 posizionata in basso */}
       <div className="absolute bottom-6 inset-x-6 z-30 flex flex-col gap-4">
         {isReady && !isCalibrating && (
           <div className="w-full max-w-md mx-auto bg-[#0a0a0c]/80 backdrop-blur-md px-4 py-2.5 rounded-xl border border-white/10 flex flex-col gap-1">
@@ -292,31 +254,29 @@ const CameraView = React.forwardRef<CameraViewRef, CameraViewProps>(({ videoRef,
             </div>
             <div className="w-full h-1.5 bg-white/10 rounded-full relative overflow-hidden">
               <div className="absolute inset-y-0 left-1/2 w-0.5 bg-white/30 z-10" />
-              <div 
-                className={`absolute inset-y-0 rounded-full transition-all duration-75 ${clampedOffset >= 0 ? 'bg-[#00e5ff] left-1/2' : 'bg-rose-500 right-1/2'}`}
-                style={{ width: `${Math.min(Math.abs(clampedOffset) / 2, 50)}%` }}
-              />
+              <div className={`absolute inset-y-0 rounded-full transition-all duration-75 ${clampedOffset >= 0 ? 'bg-[#00e5ff] left-1/2' : 'bg-rose-500 right-1/2'}`}
+                style={{ width: `${Math.min(Math.abs(clampedOffset) / 2, 50)}%` }} />
             </div>
           </div>
         )}
 
-        {/* Pulsante Calibrazione / Voce Guida */}
-        <div className="flex justify-center">
-          {onVoiceGuide ? (
+        {/* DESIGN RIMODULATO: Entrambi i bottoni visibili */}
+        <div className="flex justify-center gap-3 flex-wrap">
+          <button 
+            onClick={handleCalibrate}
+            disabled={isCalibrating || !isReady}
+            className="px-6 py-2.5 bg-white/10 hover:bg-white/20 border border-white/10 disabled:opacity-30 text-white font-mono font-bold text-[10px] tracking-widest uppercase rounded-xl transition-all active:scale-95"
+          >
+            {isCalibrating ? 'Calibrazione...' : '▶ AVVIA CALIBRAZIONE'}
+          </button>
+
+          {onVoiceGuide && (
             <button 
               onClick={onVoiceGuide}
-              disabled={!isReady}
+              disabled={!isReady || isCalibrating}
               className="px-6 py-2.5 bg-indigo-600/90 hover:bg-indigo-500 border border-indigo-400/40 disabled:opacity-30 text-white font-mono font-bold text-[10px] tracking-widest uppercase rounded-xl transition-all active:scale-95 shadow-lg flex items-center gap-2"
             >
-              🔊 Ascolta Voce Guida
-            </button>
-          ) : (
-            <button 
-              onClick={handleCalibrate}
-              disabled={isCalibrating || !isReady}
-              className="px-6 py-2.5 bg-white/10 hover:bg-white/20 border border-white/10 disabled:opacity-30 text-white font-mono font-bold text-[10px] tracking-widest uppercase rounded-xl transition-all active:scale-95"
-            >
-              {isCalibrating ? 'Calibrazione...' : 'Calibra Posizione'}
+              🔊 ASCOLTA VOCE GUIDA
             </button>
           )}
         </div>
