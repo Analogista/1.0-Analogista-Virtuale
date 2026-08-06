@@ -3,7 +3,6 @@ import { playFeedbackSound } from '../utils/sound';
 
 export type AutomatedResponse = 'SI' | 'NO' | 'NON_RILEVATO';
 
-// Chiave rimossa. Se l'utente non fornisce una chiave, si userà la sintesi vocale del browser (gratuita/offline).
 const INTERNAL_FALLBACK_KEY = "";
 
 export class AdvancedVoiceService {
@@ -18,6 +17,7 @@ export class AdvancedVoiceService {
     private recognition: any = null;
     private dynamicApiKey: string | null = null;
     private activeRejects: ((reason?: any) => void)[] = [];
+    private epoch = 0;
 
     constructor() {
         this.synthesis = window.speechSynthesis;
@@ -33,7 +33,6 @@ export class AdvancedVoiceService {
     }
 
     private isPackaged() { return !!(window as any).Capacitor; }
-
     public setApiKey(key: string) { this.dynamicApiKey = key; }
     async initializeDetector(videoElement: HTMLVideoElement) { await this.motionDetector.initialize(videoElement); }
     public startManualDetection() { if (this.isPaused) return; this.motionDetector.startDetection(); this.dispatchStatus('listening', 'Rilevamento manuale attivo'); }
@@ -73,6 +72,7 @@ export class AdvancedVoiceService {
     }
 
     public cancel() {
+        this.epoch++;
         this.activeRejects.forEach(reject => reject(new Error("CANCELLED")));
         this.activeRejects = [];
         this.isPaused = false;
@@ -172,15 +172,17 @@ export class AdvancedVoiceService {
     public startDetection() { this.motionDetector.startDetection(); }
     public stopDetection() { this.motionDetector.stopDetection(); }
 
-    // VOCE NATIVA del dispositivo (app installata Android): motore TTS di sistema, offline, sempre affidabile
-    private async nativeSpeak(text: string): Promise<boolean> {
+    private async nativeSpeak(text: string, myEpoch: number): Promise<boolean> {
         if (!this.isPackaged()) return false;
         try {
             const mod: any = await import('@capacitor-community/text-to-speech');
+            if (myEpoch !== this.epoch) return false;
             await mod.TextToSpeech.speak({ text, lang: 'it-IT', rate: 0.95, pitch: 1.0, volume: 1.0, category: 'playback' });
             return true;
-        } catch (e) {
-            console.warn('Native TTS failed, uso fallback:', e);
+        } catch (e: any) {
+            const msg = String(e?.message || e?.code || e);
+            console.warn('Native TTS failed:', msg);
+            if (myEpoch === this.epoch) this.dispatchStatus('idle', 'DIAGNOSI VOCE NATIVA: ' + msg);
             return false;
         }
     }
@@ -188,19 +190,19 @@ export class AdvancedVoiceService {
     async speak(text: string): Promise<void> {
         return new Promise((resolve, reject) => {
             this.activeRejects.push(reject);
+            const myEpoch = this.epoch;
             const execute = async () => {
-                if (this.isPaused) { resolve(); return; }
+                if (this.isPaused || myEpoch !== this.epoch) { resolve(); return; }
                 if (this.currentAudio) { this.currentAudio.pause(); this.currentAudio = null; }
                 if (this.synthesis.speaking) this.synthesis.cancel();
                 this.dispatchStatus('speaking', text);
 
-                // 0. Nell'app installata parla subito il motore vocale del telefono
-                if (await this.nativeSpeak(text)) {
-                    if (!this.isPaused) { resolve(); this.activeRejects = this.activeRejects.filter(r => r !== reject); }
+                if (await this.nativeSpeak(text, myEpoch)) {
+                    if (!this.isPaused && myEpoch === this.epoch) { resolve(); this.activeRejects = this.activeRejects.filter(r => r !== reject); }
                     return;
                 }
+                if (myEpoch !== this.epoch) { resolve(); return; }
 
-                // 1. Google Cloud TTS (solo online e solo con chiave)
                 const apiKey = navigator.onLine ? (this.dynamicApiKey || localStorage.getItem('GOOGLE_API_KEY') || INTERNAL_FALLBACK_KEY) : '';
                 if (apiKey) {
                     try {
@@ -215,7 +217,7 @@ export class AdvancedVoiceService {
                         });
                         if (!response.ok) { const err = await response.json(); throw new Error(err.error?.message || response.statusText); }
                         const data = await response.json();
-                        if (data.audioContent) {
+                        if (data.audioContent && myEpoch === this.epoch) {
                             const audio = new Audio(`data:audio/mp3;base64,${data.audioContent}`);
                             this.currentAudio = audio;
                             audio.onended = () => { this.currentAudio = null; if (!this.isPaused) { resolve(); this.activeRejects = this.activeRejects.filter(r => r !== reject); } };
@@ -226,9 +228,10 @@ export class AdvancedVoiceService {
                     } catch (error) { console.warn("Cloud TTS failed (Using Browser Fallback). Reason:", error); }
                 }
 
-                // 2. Fallback browser RINFORZATO (sblocco Android + rete di sicurezza anti-blocco)
                 setTimeout(() => {
+                    if (myEpoch !== this.epoch) { resolve(); return; }
                     let settled = false;
+                    let spoke = false;
                     let safety: number | undefined, kick: number | undefined, retryT: number | undefined;
                     const done = () => {
                         if (settled) return;
@@ -237,11 +240,15 @@ export class AdvancedVoiceService {
                         if (kick) clearTimeout(kick);
                         if (retryT) clearTimeout(retryT);
                         this.currentUtterance = null;
+                        if (myEpoch === this.epoch && !spoke && !this.isPaused) {
+                            this.dispatchStatus('idle', 'DIAGNOSI: sintesi di sistema muta. Controlla volume multimediale e impostazioni TTS del dispositivo.');
+                        }
                         if (!this.isPaused) { resolve(); this.activeRejects = this.activeRejects.filter(r => r !== reject); }
                     };
                     safety = window.setTimeout(done, Math.max(20000, text.length * 150));
                     kick = window.setTimeout(() => { try { this.synthesis.resume(); } catch (e) {} }, 250);
                     const buildAndSpeak = () => {
+                        if (myEpoch !== this.epoch) return;
                         try { this.synthesis.cancel(); this.synthesis.resume(); } catch (e) {}
                         const utterance = new SpeechSynthesisUtterance(text);
                         this.currentUtterance = utterance;
@@ -253,6 +260,7 @@ export class AdvancedVoiceService {
                             voices.find(v => v.name.includes("Google italiano")) ||
                             voices.find(voice => voice.lang.includes('it'));
                         if (selectedVoice) utterance.voice = selectedVoice;
+                        utterance.onstart = () => { spoke = true; };
                         utterance.onend = done;
                         utterance.onerror = done;
                         this.synthesis.speak(utterance);
