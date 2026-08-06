@@ -147,7 +147,7 @@ jobs:
       - name: Dipendenze
         run: |
           npm ci --legacy-peer-deps --no-audit --no-fund || npm install --legacy-peer-deps --no-audit --no-fund
-          npm install -D --legacy-peer-deps --no-audit --no-fund electron@33 electron-builder@25
+          npm install -D --legacy-peer-deps --no-audit --no-fund electron@33 electron-builder@25  @capacitor-community/text-to-speech@5
 
       - name: Build web
         run: npx vite build
