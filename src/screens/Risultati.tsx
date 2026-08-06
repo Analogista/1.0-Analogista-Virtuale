@@ -9,6 +9,7 @@ import { GoogleGenAI } from '@google/genai';
 import { useNavigate } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
 import { ANALOGISTA_KNOWLEDGE } from '../utils/knowledgeBase';
+import { generateAnalogicalAnalysis } from '../utils/AnalysisEngine';
 import { db } from '../services/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { handleFirestoreError, OperationType } from '../utils/firestore';
@@ -381,45 +382,58 @@ const Risultati: React.FC<ScreenProps> = () => {
       doc.save(`Report_${userData.nome}.pdf`);
   };
 
-  // --- LOGICA DI INCROCIO DATI (RIASSUMENDO) ---
+  // --- LOGICA DI INCROCIO DATI (RIASSUMENDO CON ANALYSIS ENGINE) ---
   const renderSummary = () => {
-         const { nome, problema, puntoDistonicoFinale, sigilloFinale, induttoreResult, giustificatoTorto, testimoneChiave, timeLine } = userData;
+         const { puntoDistonicoFinale, sigilloFinale } = userData;
          
          if (!puntoDistonicoFinale || !sigilloFinale) {
              return <p className="text-indigo-800 text-sm italic">Completa tutti i test precedenti (Punti Distonici e Sigilli) per visualizzare il riepilogo incrociato.</p>;
          }
 
+         const analysis = generateAnalogicalAnalysis(userData);
+
          return (
-            <div className="text-indigo-900 text-sm space-y-3 leading-relaxed text-justify">
-                <p>
-                    Gentile <strong>{nome || 'Utente'}</strong>, il disagio che avverti (<em>"{problema || 'non specificato'}"</em>) si manifesta prevalentemente nell'area <strong>{puntoDistonicoFinale.toUpperCase()}</strong> ed è alimentato dal sigillo <strong>{sigilloFinale.toUpperCase()}</strong>.
-                </p>
-                <p>
-                    Analizzando la tua struttura, emergi come soggetto a prevalenza <strong>{induttoreResult === 'Destro' ? 'ISTITUZIONALE (Grillo)' : 'TRASGRESSIVA (Lucignolo)'}</strong>. 
-                    {induttoreResult === 'Destro' 
-                        ? " Tendenzialmente cerchi regole, logica, stabilità e coerenza, " 
-                        : " Tendenzialmente cerchi passione, istinto, novità e libertà, "
-                    }
-                    tuttavia...
-                </p>
-                {testimoneChiave && (
-                    <p>
-                        In relazione all'evento accaduto a <strong>{timeLine.etaEventoCausa} anni</strong> con <strong>{testimoneChiave}</strong>, 
-                        {giustificatoTorto === 'SI' ? (
-                            <span> hai reagito <strong>GIUSTIFICANDO</strong> il torto (meccanismo di Dissociazione). Questo significa che tendi a rivolgere la tensione contro te stesso/a, "ingoiando il rospo" e alimentando sensi di colpa o inadeguatezza per non rompere l'equilibrio.</span>
-                        ) : (
-                            <span> hai reagito <strong>NON GIUSTIFICANDO</strong> il torto (meccanismo di Scissione). Questo significa che tendi a proiettare la tensione all'esterno, vivendo spesso conflitti aperti, rabbia o senso di ingiustizia verso gli altri.</span>
-                        )}
+            <div className="text-indigo-900 text-sm space-y-4 leading-relaxed text-justify">
+                <div className="p-3.5 bg-indigo-100/70 rounded-xl border border-indigo-200 shadow-sm">
+                  <p className="font-bold text-indigo-950 flex items-center gap-1.5 mb-1">
+                    <span>📌</span> Sintesi Inconscia Integrata
+                  </p>
+                  <p className="text-indigo-900 whitespace-pre-line text-sm leading-relaxed">{analysis.sintesiCompleta}</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="p-3 bg-white rounded-xl border border-indigo-100 shadow-sm">
+                    <p className="font-bold text-xs uppercase tracking-wide text-indigo-700 mb-1 flex items-center gap-1">
+                      <span>🎭</span> Fase & Induttore
                     </p>
-                )}
-                {timeLine.diagnosi && (
-                    <p className="border-t border-indigo-200 pt-2 mt-2">
-                        Questa dinamica ha creato una condizione temporale di <strong>{timeLine.diagnosi.toUpperCase()}</strong>: 
-                        {timeLine.diagnosi === 'Sogno Frustrato' 
-                            ? " fatichi a trasformare i tuoi desideri in realtà concrete, bloccandoti un attimo prima del traguardo." 
-                            : " senti che il passato o i doveri limitano la tua libertà d'azione nel presente."}
+                    <p className="text-xs text-slate-700 leading-relaxed">{analysis.faseInconscia}</p>
+                  </div>
+                  <div className="p-3 bg-white rounded-xl border border-indigo-100 shadow-sm">
+                    <p className="font-bold text-xs uppercase tracking-wide text-indigo-700 mb-1 flex items-center gap-1">
+                      <span>⚡</span> Area di Conflitto
                     </p>
-                )}
+                    <p className="text-xs text-slate-700 leading-relaxed">{analysis.areaConflitto}</p>
+                  </div>
+                  <div className="p-3 bg-white rounded-xl border border-indigo-100 shadow-sm">
+                    <p className="font-bold text-xs uppercase tracking-wide text-indigo-700 mb-1 flex items-center gap-1">
+                      <span>🛡️</span> Sigillo Difensivo
+                    </p>
+                    <p className="text-xs text-slate-700 leading-relaxed">{analysis.sigilloDifesa}</p>
+                  </div>
+                  <div className="p-3 bg-white rounded-xl border border-indigo-100 shadow-sm">
+                    <p className="font-bold text-xs uppercase tracking-wide text-indigo-700 mb-1 flex items-center gap-1">
+                      <span>🔄</span> Reazione & Meccanismo
+                    </p>
+                    <p className="text-xs text-slate-700 leading-relaxed">{analysis.meccanismoReattivo}</p>
+                  </div>
+                </div>
+
+                <div className="p-3.5 bg-amber-50 rounded-xl border border-amber-200/80 text-amber-950 shadow-sm">
+                  <p className="font-bold text-xs uppercase tracking-wide text-amber-800 mb-1 flex items-center gap-1">
+                    <span>💡</span> Consiglio Analogico Riconciliativo (Gratuito)
+                  </p>
+                  <p className="text-xs text-amber-900 leading-relaxed">{analysis.consiglioAnalogico}</p>
+                </div>
             </div>
          );
   };

@@ -49,7 +49,7 @@ const TestSigilliVincoli: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }
     const startCalibration = async () => {
         setStatus('CALIBRATING');
         setMessage("Rimani immobile per la calibrazione...");
-        await voiceService.speak("stessa posizione come in precedenza, dopo il countdown inizieremo il test");
+        await voiceService.speak("stessa posizione come in precedenza, dopo il conto alla rovescia inizieremo il test");
         if (cameraRef.current) {
             cameraRef.current.startCalibration();
         }

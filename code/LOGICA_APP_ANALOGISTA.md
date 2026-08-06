@@ -15,8 +15,8 @@ Per l'Agente IA che dovrà costruire l'app, ecco i pilastri logici:
 L'indagine segue una struttura ad albero:
 - **Calibrazione:** Definisce la soglia di sensibilità dell'oscillazione.
 - **Test Induttori:**
-  - Risultato "Destro": Carica il modulo informativo "Induttore Destro" (Significato: Padre/Autorità/Evolutivo) e sblocca le domande sulla linea temporale paterna.
-  - Risultato "Sinistro": Carica il modulo "Induttore Sinistro" (Madre/Affettività/Involutivo) e sblocca le domande sulla sfera materna.
+  - Risultato "Destro": Carica il modulo informativo "Induttore Destro" e sblocca le domande sulla linea temporale paterna.
+  - Risultato "Sinistro": Carica il modulo "Induttore Sinistro" e sblocca le domande sulla sfera materna.
 
 ## 3. Interfaccia di Supporto (UI Condizionale)
 - Ogni selezione (manuale o tramite webcam) deve aggiornare un "Knowledge Panel" laterale.

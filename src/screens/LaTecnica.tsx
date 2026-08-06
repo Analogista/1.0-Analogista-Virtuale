@@ -37,6 +37,21 @@ const LaTecnica: React.FC<ScreenProps> = ({ setPage }) => {
       </div>
 
       <div className="my-6">
+        <h4 className="text-lg font-semibold text-gray-700 mb-2 text-center">PER IL TEST INDUTTORE</h4>
+        <div className="relative w-full overflow-hidden rounded-lg shadow-lg" style={{ paddingTop: '56.25%' }}>
+          <iframe
+            className="absolute top-0 left-0 w-full h-full"
+            src="https://www.youtube.com/embed/qeS_LeG--jA"
+            title="Per il test induttore"
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+          ></iframe>
+        </div>
+        <p className="text-sm text-[#dc0f0f] mt-3 text-center font-medium">Guarda questo video per capire come posizionarti per il test induttore.</p>
+      </div>
+
+      <div className="my-6">
         <h4 className="text-lg font-semibold text-gray-700 mb-2 text-center">Video Esempio</h4>
         <div className="relative w-full overflow-hidden rounded-lg shadow-lg" style={{ paddingTop: '56.25%' }}>
           <iframe

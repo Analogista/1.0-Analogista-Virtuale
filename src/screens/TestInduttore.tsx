@@ -81,7 +81,7 @@ const TestInduttore: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }) => 
     setStatus('INTRO_PLAYING');
     setMessage('Ascolta le istruzioni...');
     
-    const introText = `${userData.nome} ponìti in piedi di fronte alla telecamera, è sufficiente che io ti veda dalla vita in su. Braccia lungo il corpo e piedi larghezza delle spalle ed occhi chiusi. ti chiederò di muovere, come nel video sopra, prima la mano destra e poi la mano sinistra e valuterò l'oscillazione naturale del tuo corpo, se in avanti o indietro. Quando sei pronto iniziamo.`;
+    const introText = `${userData.nome} mettiti in piedi di fronte alla telecamera, è sufficiente che io ti veda dalla vita in su. Braccia distese lungo il corpo, piedi larghezza delle spalle e occhi chiusi. ti chiederò di muovere, come nel video esempio, prima la mano destra e poi la mano sinistra e valuterò l'oscillazione naturale del tuo corpo, se in avanti o indietro. Quando sei pronto iniziamo.`;
     
     try {
       await voiceService.speak(introText);
