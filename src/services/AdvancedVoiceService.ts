@@ -16,7 +16,7 @@ export class AdvancedVoiceService {
     private isPaused = false;
     private recognition: any = null;
     private dynamicApiKey: string | null = null;
-    private activeRejects: ((reason?: any) => void)[] = [];
+    private activeSettlers: (() => void)[] = [];
     private epoch = 0;
 
     constructor() {
@@ -73,8 +73,8 @@ export class AdvancedVoiceService {
 
     public cancel() {
         this.epoch++;
-        this.activeRejects.forEach(reject => reject(new Error("CANCELLED")));
-        this.activeRejects = [];
+        const settlers = this.activeSettlers;
+        this.activeSettlers = [];
         this.isPaused = false;
         this.isWaitingForResponse = false;
         if (this.currentAudio) { this.currentAudio.pause(); this.currentAudio = null; }
@@ -85,6 +85,7 @@ export class AdvancedVoiceService {
         if (this.responseTimeout) clearTimeout(this.responseTimeout);
         if (this.movementHandler) window.removeEventListener('movementDetected', this.movementHandler);
         this.dispatchStatus('idle', '');
+        settlers.forEach(s => s());
     }
 
     public listenForCommand(command: string, callback: () => void) {
@@ -115,21 +116,30 @@ export class AdvancedVoiceService {
     }
 
     askQuestion(question: string, userName = ''): Promise<AutomatedResponse> {
-        return new Promise((resolve, reject) => {
-            this.activeRejects.push(reject);
+        return new Promise((resolve) => {
+            let done = false;
+            const settle = (v: AutomatedResponse) => {
+                if (done) return;
+                done = true;
+                this.activeSettlers = this.activeSettlers.filter(s => s !== wrapper);
+                resolve(v);
+            };
+            const wrapper = () => settle('NON_RILEVATO');
+            this.activeSettlers.push(wrapper);
+            const myEpoch = this.epoch;
             const execute = async () => {
-                if (this.isPaused) return;
+                if (this.isPaused || myEpoch !== this.epoch) { settle('NON_RILEVATO'); return; }
                 this.isWaitingForResponse = true;
                 const questionText = question.replace(/\(nome\)/g, userName);
                 await this.speak(questionText);
-                if (this.isPaused) return;
-                setTimeout(() => { if (!this.isPaused) this.startResponseDetection(resolve, reject); }, 500);
+                if (this.isPaused || myEpoch !== this.epoch) return;
+                setTimeout(() => { if (!this.isPaused && myEpoch === this.epoch) this.startResponseDetection(settle); }, 500);
             };
             execute();
         });
     }
 
-    private startResponseDetection(resolve: (value: AutomatedResponse) => void, reject: (reason?: any) => void) {
+    private startResponseDetection(settle: (v: AutomatedResponse) => void) {
         this.motionDetector.startDetection();
         this.dispatchStatus('listening', 'Attendo una risposta (Oscilla SI/NO)...');
         if (this.movementHandler) window.removeEventListener('movementDetected', this.movementHandler);
@@ -143,8 +153,7 @@ export class AdvancedVoiceService {
                 else response = 'NON_RILEVATO';
                 const feedbackText = response === 'SI' ? "Ho rilevato un SÌ." : response === 'NO' ? "Ho rilevato un NO." : "Non ho capito.";
                 await this.speak(feedbackText);
-                resolve(response);
-                this.activeRejects = this.activeRejects.filter(r => r !== reject);
+                settle(response);
             }
         };
         window.addEventListener('movementDetected', this.movementHandler);
@@ -153,8 +162,7 @@ export class AdvancedVoiceService {
             if (this.isWaitingForResponse && !this.isPaused) {
                 this.stopResponseDetection();
                 await this.speak("Non ho rilevato nessun movimento.");
-                resolve('NON_RILEVATO');
-                this.activeRejects = this.activeRejects.filter(r => r !== reject);
+                settle('NON_RILEVATO');
             }
         }, 12000);
     }
@@ -177,9 +185,14 @@ export class AdvancedVoiceService {
         try {
             const mod: any = await import('@capacitor-community/text-to-speech');
             if (myEpoch !== this.epoch) return false;
-            await mod.TextToSpeech.speak({ text, lang: 'it-IT', rate: 0.95, pitch: 1.0, volume: 1.0, category: 'playback' });
+            const watchdog = new Promise<never>((_, rej) => setTimeout(() => rej(new Error('TIMEOUT_MOTORE_4s')), 4000));
+            await Promise.race([
+                mod.TextToSpeech.speak({ text, lang: 'it-IT', rate: 0.95, pitch: 1.0, volume: 1.0, category: 'playback' }),
+                watchdog
+            ]);
             return true;
         } catch (e: any) {
+            try { const m: any = await import('@capacitor-community/text-to-speech'); if (m.TextToSpeech.stop) m.TextToSpeech.stop(); } catch (e2) {}
             const msg = String(e?.message || e?.code || e);
             console.warn('Native TTS failed:', msg);
             if (myEpoch === this.epoch) this.dispatchStatus('idle', 'DIAGNOSI VOCE NATIVA: ' + msg);
@@ -188,20 +201,27 @@ export class AdvancedVoiceService {
     }
 
     async speak(text: string): Promise<void> {
-        return new Promise((resolve, reject) => {
-            this.activeRejects.push(reject);
+        return new Promise((resolve) => {
+            let done = false;
+            const settle = () => {
+                if (done) return;
+                done = true;
+                this.activeSettlers = this.activeSettlers.filter(s => s !== settle);
+                resolve();
+            };
+            this.activeSettlers.push(settle);
             const myEpoch = this.epoch;
             const execute = async () => {
-                if (this.isPaused || myEpoch !== this.epoch) { resolve(); return; }
+                if (this.isPaused || myEpoch !== this.epoch) { settle(); return; }
                 if (this.currentAudio) { this.currentAudio.pause(); this.currentAudio = null; }
                 if (this.synthesis.speaking) this.synthesis.cancel();
                 this.dispatchStatus('speaking', text);
 
                 if (await this.nativeSpeak(text, myEpoch)) {
-                    if (!this.isPaused && myEpoch === this.epoch) { resolve(); this.activeRejects = this.activeRejects.filter(r => r !== reject); }
+                    if (myEpoch === this.epoch && !this.isPaused) settle();
                     return;
                 }
-                if (myEpoch !== this.epoch) { resolve(); return; }
+                if (myEpoch !== this.epoch) { settle(); return; }
 
                 const apiKey = navigator.onLine ? (this.dynamicApiKey || localStorage.getItem('GOOGLE_API_KEY') || INTERNAL_FALLBACK_KEY) : '';
                 if (apiKey) {
@@ -220,8 +240,8 @@ export class AdvancedVoiceService {
                         if (data.audioContent && myEpoch === this.epoch) {
                             const audio = new Audio(`data:audio/mp3;base64,${data.audioContent}`);
                             this.currentAudio = audio;
-                            audio.onended = () => { this.currentAudio = null; if (!this.isPaused) { resolve(); this.activeRejects = this.activeRejects.filter(r => r !== reject); } };
-                            audio.onerror = () => { this.currentAudio = null; resolve(); };
+                            audio.onended = () => { this.currentAudio = null; if (!this.isPaused) settle(); };
+                            audio.onerror = () => { this.currentAudio = null; settle(); };
                             await audio.play();
                             return;
                         }
@@ -229,13 +249,11 @@ export class AdvancedVoiceService {
                 }
 
                 setTimeout(() => {
-                    if (myEpoch !== this.epoch) { resolve(); return; }
-                    let settled = false;
+                    if (myEpoch !== this.epoch) { settle(); return; }
                     let spoke = false;
                     let safety: number | undefined, kick: number | undefined, retryT: number | undefined;
-                    const done = () => {
-                        if (settled) return;
-                        settled = true;
+                    const finish = () => {
+                        if (done) return;
                         if (safety) clearTimeout(safety);
                         if (kick) clearTimeout(kick);
                         if (retryT) clearTimeout(retryT);
@@ -243,9 +261,9 @@ export class AdvancedVoiceService {
                         if (myEpoch === this.epoch && !spoke && !this.isPaused) {
                             this.dispatchStatus('idle', 'DIAGNOSI: sintesi di sistema muta. Controlla volume multimediale e impostazioni TTS del dispositivo.');
                         }
-                        if (!this.isPaused) { resolve(); this.activeRejects = this.activeRejects.filter(r => r !== reject); }
+                        settle();
                     };
-                    safety = window.setTimeout(done, Math.max(20000, text.length * 150));
+                    safety = window.setTimeout(finish, Math.max(20000, text.length * 150));
                     kick = window.setTimeout(() => { try { this.synthesis.resume(); } catch (e) {} }, 250);
                     const buildAndSpeak = () => {
                         if (myEpoch !== this.epoch) return;
@@ -261,12 +279,12 @@ export class AdvancedVoiceService {
                             voices.find(voice => voice.lang.includes('it'));
                         if (selectedVoice) utterance.voice = selectedVoice;
                         utterance.onstart = () => { spoke = true; };
-                        utterance.onend = done;
-                        utterance.onerror = done;
+                        utterance.onend = finish;
+                        utterance.onerror = finish;
                         this.synthesis.speak(utterance);
                     };
                     buildAndSpeak();
-                    retryT = window.setTimeout(() => { if (!settled && !this.synthesis.speaking) buildAndSpeak(); }, 1200);
+                    retryT = window.setTimeout(() => { if (!done && !this.synthesis.speaking) buildAndSpeak(); }, 1200);
                 }, 100);
             };
             execute();
