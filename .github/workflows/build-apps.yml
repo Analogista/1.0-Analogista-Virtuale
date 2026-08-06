@@ -25,7 +25,7 @@ jobs:
       - name: Dipendenze
         run: |
           npm ci --legacy-peer-deps --no-audit --no-fund || npm install --legacy-peer-deps --no-audit --no-fund
-          npm install --legacy-peer-deps --no-audit --no-fund @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
+          npm install --legacy-peer-deps --no-audit --no-fund @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6  @capacitor-community/text-to-speech@5
 
       - name: Modulo offline
         run: |
