@@ -7,8 +7,6 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 jobs:
   android:
@@ -121,20 +119,21 @@ jobs:
           tag_name: build-${{ github.run_number }}
           files: android/app/build/outputs/apk/debug/app-debug.apk
 
-  pages:
-    runs-on: ubuntu-latest
-    needs: []
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  windows:
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+
       - name: Dipendenze
-        run: npm ci --legacy-peer-deps --no-audit --no-fund || npm install --legacy-peer-deps --no-audit --no-fund
+        run: |
+          npm ci --legacy-peer-deps --no-audit --no-fund || npm install --legacy-peer-deps --no-audit --no-fund
+          npm install -D --legacy-peer-deps --no-audit --no-fund electron@33 electron-builder@25 @capacitor-community/text-to-speech@5
+
       - name: Patch AuthContext (utente locale automatico)
+        shell: bash
         run: |
           cat > patch.cjs << 'EOF'
           const fs = require('fs');
@@ -151,14 +150,58 @@ jobs:
           }
           EOF
           node patch.cjs
-      - name: Build web per Pages
-        run: npx vite build --base=/${{ github.event.repository.name }}/
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+
+      - name: Build web
+        run: npx vite build
+
+      - name: Prepara Electron
+        shell: bash
+        run: |
+          mkdir -p electron dist-electron
+          cat > electron/main.cjs << 'EOF'
+          const { app, BrowserWindow, session } = require('electron');
+          const path = require('path');
+          const express = require('express');
+          function startStaticServer() {
+            return new Promise((resolve) => {
+              const srv = express();
+              const dist = path.join(__dirname, '..', 'dist');
+              srv.use(express.static(dist));
+              srv.get('*', (_q, res) => res.sendFile(path.join(dist, 'index.html')));
+              const s = srv.listen(0, '127.0.0.1', () => resolve(s.address().port));
+            });
+          }
+          async function main() {
+            const port = await startStaticServer();
+            session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => {
+              cb(['media', 'camera', 'microphone', 'audioCapture', 'videoCapture', 'mediaKeySystem'].includes(permission));
+            });
+            const win = new BrowserWindow({ width: 1100, height: 800, title: 'Analogista Virtuale di Max Pisani', autoHideMenuBar: true });
+            win.loadURL(`http://127.0.0.1:${port}`);
+          }
+          app.whenReady().then(main);
+          app.on('window-all-closed', () => app.quit());
+          EOF
+          cat > electron-builder.yml << 'EOF'
+          appId: com.pacommunication.analogista
+          productName: Analogista Virtuale
+          directories:
+            output: release
+          files:
+            - dist/**/*
+            - dist-electron/**/*
+            - package.json
+          win:
+            target: nsis
+          EOF
+          npm pkg set main=dist-electron/main.cjs
+          npx esbuild electron/main.cjs --bundle --platform=node --outfile=dist-electron/main.cjs --external:electron
+
+      - name: Compila installer Windows
+        run: npx electron-builder --win --publish never
+
+      - name: Pubblica installer
+        uses: softprops/action-gh-release@v2
         with:
-          path: dist
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          tag_name: build-${{ github.run_number }}
+          files: release/*.exe
