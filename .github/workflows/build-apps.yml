@@ -1,13 +1,14 @@
 name: Build Apps
 
 on:
+  push:
+    branches: [ main ]
   workflow_dispatch:
 
 permissions:
   contents: write
-
-env:
-  GEMINI_API_KEY: offline-placeholder
+  pages: write
+  id-token: write
 
 jobs:
   android:
@@ -25,70 +26,14 @@ jobs:
       - name: Dipendenze
         run: |
           npm ci --legacy-peer-deps --no-audit --no-fund || npm install --legacy-peer-deps --no-audit --no-fund
-          npm install --legacy-peer-deps --no-audit --no-fund @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6  @capacitor-community/text-to-speech@5
+          npm install --legacy-peer-deps --no-audit --no-fund @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6 @capacitor-community/text-to-speech@5
 
-      - name: Modulo offline
-        run: |
-          mkdir -p src/utils
-          cat > src/utils/offline.ts << 'EOF'
-          export const isCapacitor = () => !!(window as any).Capacitor;
-          export const isElectron = () => navigator.userAgent.toLowerCase().includes('electron');
-          export const isOfflinePlatform = () => isCapacitor() || isElectron();
-          export const getLocalNDA = () => localStorage.getItem('NDA_ACCEPTED') === 'true';
-          export const setLocalNDA = () => localStorage.setItem('NDA_ACCEPTED', 'true');
-          EOF
-
-      - name: AuthGate con accesso locale
-        run: |
-          cat > src/components/AuthGate.tsx << 'EOF'
-          import React, { useState } from 'react';
-          import { useAuth } from '../contexts/AuthContext';
-          import { getLocalNDA, setLocalNDA } from '../utils/offline';
-          import { ShieldCheck, Loader2, LogIn } from 'lucide-react';
-          export const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-            const { user, loading, loginWithGoogle, error, clearError } = useAuth();
-            const [nda, setNda] = useState(getLocalNDA());
-            const [checked, setChecked] = useState(false);
-            if (loading) return (<div className="min-h-screen flex items-center justify-center bg-slate-50"><Loader2 className="w-10 h-10 animate-spin text-blue-600" /></div>);
-            if (!user) return (
-              <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
-                <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 text-center">
-                  <h1 className="text-2xl font-bold text-gray-800 mb-2">Accesso Riservato</h1>
-                  <p className="text-sm text-gray-500 mb-6">I tuoi dati saranno trattati con la massima riservatezza.</p>
-                  {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
-                  <button onClick={() => { clearError(); loginWithGoogle(); }} className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition">
-                    <LogIn className="w-5 h-5" /> Accedi con Google
-                  </button>
-                </div>
-              </div>
-            );
-            if (!nda) return (
-              <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
-                <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8">
-                  <ShieldCheck className="w-10 h-10 text-blue-600 mx-auto mb-4" />
-                  <h2 className="text-xl font-bold text-center mb-4">Accordo di Riservatezza (NDA)</h2>
-                  <div className="text-xs text-gray-600 bg-slate-100 rounded-lg p-4 h-40 overflow-y-auto mb-4">
-                    <p>Il presente strumento e fornito cosi com'e per finalita di intrattenimento e approfondimento personale. Non costituisce dispositivo medico ne fornisce diagnosi. L'utilizzatore si impegna a non diffondere contenuti, esiti o metodologie. I dati trattati restano sotto la responsabilita dell'operatore.</p>
-                  </div>
-                  <label className="flex items-start gap-2 text-sm mb-4">
-                    <input type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)} className="mt-1" />
-                    Ho letto e accetto integralmente l'accordo di riservatezza.
-                  </label>
-                  <button disabled={!checked} onClick={() => { setLocalNDA(); setNda(true); }} className="w-full bg-blue-600 disabled:bg-gray-300 text-white font-semibold py-3 rounded-xl transition">
-                    Firma e Accetta
-                  </button>
-                </div>
-              </div>
-            );
-            return <>{children}</>;
-          };
-          EOF
-
-      - name: Patch AuthContext (utente locale)
+      - name: Patch AuthContext (utente locale automatico)
         run: |
           cat > patch.cjs << 'EOF'
           const fs = require('fs');
           const p = 'src/contexts/AuthContext.tsx';
+          if (!fs.existsSync(p) || !fs.existsSync('src/utils/offline.ts')) { console.log('skip patch'); process.exit(0); }
           let s = fs.readFileSync(p, 'utf8');
           if (!s.includes('isOfflinePlatform')) {
             s = s.replace("import { auth, googleProvider } from '../services/firebase';",
@@ -124,6 +69,46 @@ jobs:
         run: |
           sed -i 's#</manifest>#<uses-permission android:name="android.permission.CAMERA" />\n    <uses-permission android:name="android.permission.RECORD_AUDIO" />\n    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\n</manifest>#' android/app/src/main/AndroidManifest.xml
 
+      - name: Patch MainActivity (grant webcam)
+        run: |
+          python3 << 'PYEOF'
+          import glob, re
+          JAVA = """package %PKG%;
+
+          import android.Manifest;
+          import android.content.pm.PackageManager;
+          import android.webkit.PermissionRequest;
+          import android.webkit.WebChromeClient;
+          import androidx.core.app.ActivityCompat;
+          import androidx.core.content.ContextCompat;
+          import com.getcapacitor.BridgeActivity;
+
+          public class MainActivity extends BridgeActivity {
+            @Override
+            public void onStart() {
+              super.onStart();
+              if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                    != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO}, 1001);
+              }
+              getBridge().getWebView().setWebChromeClient(new WebChromeClient() {
+                @Override
+                public void onPermissionRequest(final PermissionRequest request) {
+                  runOnUiThread(() -> request.grant(request.getResources()));
+                }
+              });
+            }
+          }
+          """
+          for mj in glob.glob('android/app/src/main/java/**/MainActivity.java', recursive=True):
+              src = open(mj, encoding='utf-8').read()
+              m = re.search(r'package\s+([\w.]+);', src)
+              if m:
+                  open(mj, 'w', encoding='utf-8').write(JAVA.replace('%PKG%', m.group(1)))
+                  print('Patched', mj)
+          PYEOF
+
       - name: Licenze Android
         run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
@@ -136,70 +121,44 @@ jobs:
           tag_name: build-${{ github.run_number }}
           files: android/app/build/outputs/apk/debug/app-debug.apk
 
-  windows:
-    runs-on: windows-latest
+  pages:
+    runs-on: ubuntu-latest
+    needs: []
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-
       - name: Dipendenze
+        run: npm ci --legacy-peer-deps --no-audit --no-fund || npm install --legacy-peer-deps --no-audit --no-fund
+      - name: Patch AuthContext (utente locale automatico)
         run: |
-          npm ci --legacy-peer-deps --no-audit --no-fund || npm install --legacy-peer-deps --no-audit --no-fund
-          npm install -D --legacy-peer-deps --no-audit --no-fund electron@33 electron-builder@25  @capacitor-community/text-to-speech@5
-
-      - name: Build web
-        run: npx vite build
-
-      - name: Prepara Electron
-        shell: bash
-        run: |
-          mkdir -p electron dist-electron
-          cat > electron/main.cjs << 'EOF'
-          const { app, BrowserWindow, session } = require('electron');
-          const path = require('path');
-          const express = require('express');
-          function startStaticServer() {
-            return new Promise((resolve) => {
-              const srv = express();
-              const dist = path.join(__dirname, '..', 'dist');
-              srv.use(express.static(dist));
-              srv.get('*', (_q, res) => res.sendFile(path.join(dist, 'index.html')));
-              const s = srv.listen(0, '127.0.0.1', () => resolve(s.address().port));
-            });
+          cat > patch.cjs << 'EOF'
+          const fs = require('fs');
+          const p = 'src/contexts/AuthContext.tsx';
+          if (!fs.existsSync(p) || !fs.existsSync('src/utils/offline.ts')) { console.log('skip patch'); process.exit(0); }
+          let s = fs.readFileSync(p, 'utf8');
+          if (!s.includes('isOfflinePlatform')) {
+            s = s.replace("import { auth, googleProvider } from '../services/firebase';",
+              "import { auth, googleProvider } from '../services/firebase';\nimport { isOfflinePlatform } from '../utils/offline';");
+            s = s.replace("useEffect(() => {",
+              "useEffect(() => {\n    if (isOfflinePlatform()) { setUser({ uid: 'local-operator', email: 'operatore@locale.app', displayName: 'Operatore Locale' } as User); setLoading(false); return; }");
+            fs.writeFileSync(p, s);
+            console.log('AuthContext patched');
           }
-          async function main() {
-            const port = await startStaticServer();
-            session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => {
-              cb(['media', 'camera', 'microphone', 'audioCapture', 'videoCapture', 'mediaKeySystem'].includes(permission));
-            });
-            const win = new BrowserWindow({ width: 1100, height: 800, title: 'Analogista Virtuale di Max Pisani', autoHideMenuBar: true });
-            win.loadURL(`http://127.0.0.1:${port}`);
-          }
-          app.whenReady().then(main);
-          app.on('window-all-closed', () => app.quit());
           EOF
-          cat > electron-builder.yml << 'EOF'
-          appId: com.pacommunication.analogista
-          productName: Analogista Virtuale
-          directories:
-            output: release
-          files:
-            - dist/**/*
-            - dist-electron/**/*
-            - package.json
-          win:
-            target: nsis
-          EOF
-          npm pkg set main=dist-electron/main.cjs
-          npx esbuild electron/main.cjs --bundle --platform=node --outfile=dist-electron/main.cjs --external:electron
-
-      - name: Compila installer Windows
-        run: npx electron-builder --win --publish never
-
-      - name: Pubblica installer
-        uses: softprops/action-gh-release@v2
+          node patch.cjs
+      - name: Build web per Pages
+        run: npx vite build --base=/${{ github.event.repository.name }}/
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          tag_name: build-${{ github.run_number }}
-          files: release/*.exe
+          path: dist
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
