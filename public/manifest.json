@@ -7,9 +7,9 @@
   "theme_color": "#2563EB",
   "icons": [
     {
-      "src": "assets/logopac.29.36.png",
+      "src": "assets/logopac.29.36.webp",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/webp"
     }
   ]
 }

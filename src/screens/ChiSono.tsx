@@ -27,7 +27,7 @@ const ChiSono: React.FC<ScreenProps> = ({ setPage }) => {
         {/* Immagine inserita come richiesto */}
         <div className="flex justify-center my-6">
             <img 
-                src="https://files.manuscdn.com/user_upload_by_module/session_file/310419663028268770/qDaENkkfTOJyZgfU.png" 
+                src="/ioebenny.webp" 
                 alt="Max Pisani Analogista" 
                 className="w-full max-w-md rounded-xl shadow-lg border-4 border-white"
             />

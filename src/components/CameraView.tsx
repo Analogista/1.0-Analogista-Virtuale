@@ -200,7 +200,7 @@ const CameraView = React.forwardRef<CameraViewRef, CameraViewProps>(({ videoRef,
         <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover transform -scale-x-100 grayscale-[20%] brightness-110" />
         <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-20 transform -scale-x-100" />
         <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10">
-          <img src="/assets/sagoma1-removebg-preview.png" alt="Guida Silhouette" className="h-[95%] w-auto object-contain opacity-40 grayscale brightness-125"
+          <img src="/assets/sagoma-removebg-preview.webp" alt="Guida Silhouette" className="h-[95%] w-auto object-contain opacity-80 grayscale brightness-125"
             onError={(e) => {
               const parent = e.currentTarget.parentElement;
               if (parent) {

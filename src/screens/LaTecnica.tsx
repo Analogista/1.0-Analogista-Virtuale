@@ -21,10 +21,18 @@ const LaTecnica: React.FC<ScreenProps> = ({ setPage }) => {
         
         <p className="p-2 rounded-lg bg-[#57bfbf] text-[#0f4bec] text-center">Useremo una telecamera per rilevare le tue oscillazioni corporee involontarie. Un movimento in avanti indica un "SÌ" emotivo, mentre un movimento all'indietro indica un "NO". Se la prima volta ti sembrerà di non oscillare affatto, con un pò di pratica ed esercizio andrà meglio.</p>
         
+        <div className="flex justify-center my-6">
+            <img 
+                src="/assets/1esempioposizione.webp" 
+                alt="Esempio posizione" 
+                className="w-full max-w-md rounded-xl shadow-lg border-4 border-white"
+            />
+        </div>
+
         {/* Immagine Posizione */}
         <div className="flex justify-center my-6">
             <img 
-                src="/assets/posizione.png" 
+                src="/assets/1posizioneschermo.webp" 
                 alt="Esempio posizione e oscillazione" 
                 className="w-full max-w-md rounded-xl shadow-lg border-4 border-white"
             />
