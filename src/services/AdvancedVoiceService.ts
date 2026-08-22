@@ -22,7 +22,7 @@ export class AdvancedVoiceService {
     constructor() {
         this.synthesis = window.speechSynthesis;
         this.motionDetector = new MotionDetectionService();
-        try { this.synthesis.getVoices(); } catch (e) {}
+        try { this.synthesis.getVoices(); } catch { /* ignore */ }
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
         if (SpeechRecognition) {
             this.recognition = new SpeechRecognition();
@@ -44,12 +44,12 @@ export class AdvancedVoiceService {
         if (this.currentAudio && !this.currentAudio.paused) this.currentAudio.pause();
         if (this.synthesis.speaking) this.synthesis.pause();
         if (this.isWaitingForResponse || this.motionDetector['isDetecting']) this.motionDetector.stopDetection();
-        if (this.recognition) { try { this.recognition.stop(); } catch (e) {} }
+        if (this.recognition) { try { this.recognition.stop(); } catch { /* ignore */ } }
         if (this.responseTimeout) { clearTimeout(this.responseTimeout); this.responseTimeout = null; }
         this.dispatchStatus('idle', '⏸️ TEST IN PAUSA');
     }
 
-    public resume(currentPromptForRedetection?: string) {
+    public resume() {
         this.isPaused = false;
         this.dispatchStatus('idle', 'Ripresa in corso...');
         if (this.currentAudio && this.currentAudio.paused) {
@@ -91,7 +91,7 @@ export class AdvancedVoiceService {
     public listenForCommand(command: string, callback: () => void) {
         if (!this.recognition || this.isPaused) return;
         this.dispatchStatus('listening', `Dì "${command}" per iniziare...`);
-        setTimeout(() => { try { if (!this.isPaused) this.recognition.start(); } catch (e) {} }, 500);
+        setTimeout(() => { try { if (!this.isPaused) this.recognition.start(); } catch { /* ignore */ } }, 500);
         this.recognition.onresult = (event: any) => {
             const transcript = event.results[0][0].transcript.toLowerCase().trim();
             if (transcript.includes(command.toLowerCase()) || transcript.includes('via') || transcript.includes('parti') || transcript.includes('start')) {
@@ -99,12 +99,12 @@ export class AdvancedVoiceService {
                 playFeedbackSound('positive');
                 callback();
             } else {
-                setTimeout(() => { try { if (!this.isPaused) this.recognition.start(); } catch (e) {} }, 500);
+                setTimeout(() => { try { if (!this.isPaused) this.recognition.start(); } catch { /* ignore */ } }, 500);
             }
         };
         this.recognition.onerror = (event: any) => {
             if (event.error !== 'aborted' && !this.isPaused) {
-                setTimeout(() => { try { if (!this.isPaused) this.recognition.start(); } catch (e) {} }, 1000);
+                setTimeout(() => { try { if (!this.isPaused) this.recognition.start(); } catch { /* ignore */ } }, 1000);
             }
         };
     }
@@ -183,7 +183,10 @@ export class AdvancedVoiceService {
     private async nativeSpeak(text: string, myEpoch: number): Promise<boolean> {
         if (!this.isPackaged()) return false;
         try {
-            const mod: any = await import('@capacitor-community/text-to-speech');
+            const cap = (window as any).Capacitor;
+            const pkgName = '@capacitor-community/text-to-speech';
+            const mod: any = cap?.Plugins?.TextToSpeech ? { TextToSpeech: cap.Plugins.TextToSpeech } : await import(/* @vite-ignore */ pkgName).catch(() => null);
+            if (!mod?.TextToSpeech) return false;
             if (myEpoch !== this.epoch) return false;
             const watchdog = new Promise<never>((_, rej) => setTimeout(() => rej(new Error('TIMEOUT_MOTORE_4s')), 4000));
             await Promise.race([
@@ -192,7 +195,12 @@ export class AdvancedVoiceService {
             ]);
             return true;
         } catch (e: any) {
-            try { const m: any = await import('@capacitor-community/text-to-speech'); if (m.TextToSpeech.stop) m.TextToSpeech.stop(); } catch (e2) {}
+            try {
+                const cap = (window as any).Capacitor;
+                const pkgName = '@capacitor-community/text-to-speech';
+                const m: any = cap?.Plugins?.TextToSpeech ? { TextToSpeech: cap.Plugins.TextToSpeech } : await import(/* @vite-ignore */ pkgName).catch(() => null);
+                if (m?.TextToSpeech?.stop) m.TextToSpeech.stop();
+            } catch { /* ignore */ }
             const msg = String(e?.message || e?.code || e);
             console.warn('Native TTS failed:', msg);
             if (myEpoch === this.epoch) this.dispatchStatus('idle', 'DIAGNOSI VOCE NATIVA: ' + msg);
@@ -251,23 +259,22 @@ export class AdvancedVoiceService {
                 setTimeout(() => {
                     if (myEpoch !== this.epoch) { settle(); return; }
                     let spoke = false;
-                    let safety: number | undefined, kick: number | undefined, retryT: number | undefined;
                     const finish = () => {
                         if (done) return;
-                        if (safety) clearTimeout(safety);
-                        if (kick) clearTimeout(kick);
-                        if (retryT) clearTimeout(retryT);
+                        clearTimeout(safety);
+                        clearTimeout(kick);
+                        clearTimeout(retryT);
                         this.currentUtterance = null;
                         if (myEpoch === this.epoch && !spoke && !this.isPaused) {
                             this.dispatchStatus('idle', 'DIAGNOSI: sintesi di sistema muta. Controlla volume multimediale e impostazioni TTS del dispositivo.');
                         }
                         settle();
                     };
-                    safety = window.setTimeout(finish, Math.max(20000, text.length * 150));
-                    kick = window.setTimeout(() => { try { this.synthesis.resume(); } catch (e) {} }, 250);
+                    const safety = window.setTimeout(finish, Math.max(20000, text.length * 150));
+                    const kick = window.setTimeout(() => { try { this.synthesis.resume(); } catch { /* ignore */ } }, 250);
                     const buildAndSpeak = () => {
                         if (myEpoch !== this.epoch) return;
-                        try { this.synthesis.cancel(); this.synthesis.resume(); } catch (e) {}
+                        try { this.synthesis.cancel(); this.synthesis.resume(); } catch { /* ignore */ }
                         const utterance = new SpeechSynthesisUtterance(text);
                         this.currentUtterance = utterance;
                         utterance.lang = 'it-IT';
@@ -284,7 +291,7 @@ export class AdvancedVoiceService {
                         this.synthesis.speak(utterance);
                     };
                     buildAndSpeak();
-                    retryT = window.setTimeout(() => { if (!done && !this.synthesis.speaking) buildAndSpeak(); }, 1200);
+                    const retryT = window.setTimeout(() => { if (!done && !this.synthesis.speaking) buildAndSpeak(); }, 1200);
                 }, 100);
             };
             execute();

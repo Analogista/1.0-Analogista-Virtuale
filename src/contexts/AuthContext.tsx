@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
+import { User, onAuthStateChanged, signInWithPopup, signOut, signInAnonymously } from 'firebase/auth';
 import { auth, googleProvider } from '../services/firebase';
 
 interface AuthContextType {
@@ -21,14 +21,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      if (user && user.email === 'analogistabrindisi@gmail.com') {
-        setIsAdmin(true);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setUser(user);
+        if (user.email === 'analogistabrindisi@gmail.com') {
+          setIsAdmin(true);
+        } else {
+          setIsAdmin(false);
+        }
+        setLoading(false);
       } else {
-        setIsAdmin(false);
+        try {
+          await signInAnonymously(auth);
+        } catch (err) {
+          console.error("Anonymous auth failed, falling back to dummy user:", err);
+          setUser({ uid: 'local-user', email: 'local@app', displayName: 'Utente Locale' } as User);
+          setLoading(false);
+        }
       }
-      setLoading(false);
     });
 
     return unsubscribe;
@@ -37,7 +47,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loginWithGoogle = async () => {
     setError(null);
     try {
-      // Forziamo la selezione dell'account per evitare loop o cache stale
       googleProvider.setCustomParameters({ prompt: 'select_account' });
       await signInWithPopup(auth, googleProvider);
     } catch (err: any) {

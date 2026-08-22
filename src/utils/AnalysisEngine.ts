@@ -30,7 +30,7 @@ export function generateAnalogicalAnalysis(userData: UserData): AnalysisSummary 
   const prob = problema ? `"${problema.trim()}"` : 'il disagio indicato';
 
   // 1. Fase Inconscia (Induttore)
-  let faseInconscia = '';
+  let faseInconscia: string;
   if (induttoreResult === 'Destro') {
     faseInconscia = "Fase Istituzionale (Archetipo: Il Grillo Parlante). L'inconscio ricerca logica, ordine, dovere, regole e coerenza. Tende a privilegiare la stabilità ed il soddisfacimento delle aspettative altrui, vivendo tensione in presenza di trasgressione o anarchia.";
   } else if (induttoreResult === 'Sinistro') {
@@ -40,7 +40,7 @@ export function generateAnalogicalAnalysis(userData: UserData): AnalysisSummary 
   }
 
   // 2. Area di Conflitto (Punto Distonico)
-  let areaConflitto = '';
+  let areaConflitto: string;
   const distonicoUpper = (puntoDistonicoFinale || '').toUpperCase();
   if (distonicoUpper.includes('FAMIGLIA')) {
     areaConflitto = "Sfera Familiare: la tensione analogica si concentra sulle figure genitoriali o su risentimenti ed imprinting legati al nucleo d'origine.";
@@ -55,7 +55,7 @@ export function generateAnalogicalAnalysis(userData: UserData): AnalysisSummary 
   }
 
   // 3. Sigillo Analogico (Difesa dell'inconscio)
-  let sigilloDifesa = '';
+  let sigilloDifesa: string;
   const sigilloUpper = (sigilloFinale || '').toUpperCase();
   if (sigilloUpper.includes('COLPA')) {
     sigilloDifesa = "Sigillo della Colpa: l'inconscio auto-punisce la propria spinta ed il proprio merito, generando la sensazione sotterranea di sbagliare o di non meritare il pieno appagamento.";
@@ -70,7 +70,7 @@ export function generateAnalogicalAnalysis(userData: UserData): AnalysisSummary 
   }
 
   // 4. Time Line & Imprinting
-  let imprintingTimeline = '';
+  let imprintingTimeline: string;
   if (timeLine?.etaEventoCausa) {
     imprintingTimeline = `Evento Causa individuato all'età di ${timeLine.etaEventoCausa} anni`;
     if (testimoneChiave) {
@@ -84,7 +84,7 @@ export function generateAnalogicalAnalysis(userData: UserData): AnalysisSummary 
   }
 
   // 5. Meccanismo Reattivo (Giustificato / Torto)
-  let meccanismoReattivo = '';
+  let meccanismoReattivo: string;
   if (giustificatoTorto === 'SI') {
     meccanismoReattivo = "Reazione GIUSTIFICATA (Dissociazione): l'inconscio ha giustificato il comportamento della figura di riferimento, rivolgendo la tensione e la responsabilità contro se stesso per preservare la relazione.";
   } else if (giustificatoTorto === 'NO') {
@@ -104,7 +104,7 @@ Attraverso il meccanismo di ${giustificatoTorto === 'SI' ? 'Dissociazione (Giust
   `.trim();
 
   // 7. Consiglio Analogico Riconciliativo
-  let consiglioAnalogico = '';
+  let consiglioAnalogico: string;
   if (induttoreResult === 'Destro') {
     consiglioAnalogico = "Consiglio Analogico (Induttore Destro): Permettiti di gratificare i tuoi bisogni senza percepire la gioia come un'infrazione o una mancanza di dovere. Dialoga con il tuo inconscio rassicurandolo sulla bontà delle tue scelte ed alleggerisci l'iper-controllo morale.";
   } else if (induttoreResult === 'Sinistro') {

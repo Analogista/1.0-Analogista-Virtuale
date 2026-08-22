@@ -3,8 +3,6 @@ import { useUser } from '../contexts/UserContext';
 import { useApiKey } from '../contexts/ApiKeyContext';
 import CameraView from '../components/CameraView';
 import { AdvancedVoiceService } from '../services/AdvancedVoiceService';
-import InfoBox from '../components/InfoBox';
-import VideoAccordion from '../components/VideoAccordion';
 import TestControls from '../components/TestControls';
 
 interface ScreenProps {
@@ -33,8 +31,8 @@ const TestInduttore: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }) => 
 
   useEffect(() => {
     return () => {
-        try { voiceService.cancel(); } catch (e) {}
-    }
+        try { voiceService.cancel(); } catch { /* ignore */ }
+    };
   }, [voiceService]);
 
   const handleCameraReady = () => {
@@ -52,14 +50,14 @@ const TestInduttore: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }) => 
   };
   
   const handleRepeat = () => {
-      try { voiceService.cancel(); } catch(e) {}
+      try { voiceService.cancel(); } catch { /* ignore */ }
       setStatus('WAITING_CALIBRATION');
       setMessage('Premi "Inizia" per ricominciare.');
       setResults({ destra: '', sinistra: '' });
   };
   
   const handleExit = () => {
-      try { voiceService.cancel(); } catch(e) {}
+      try { voiceService.cancel(); } catch { /* ignore */ }
       // Piccolo delay per evitare crash di React durante lo smontaggio
       setTimeout(() => setPage(0), 50);
   };
@@ -132,7 +130,7 @@ const TestInduttore: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }) => 
   };
 
   const handleProsegui = () => {
-      try { voiceService.cancel(); } catch(e) {}
+      try { voiceService.cancel(); } catch { /* ignore */ }
       if (onNext) onNext(); else setPage(1);
   };
 
