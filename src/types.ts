@@ -15,6 +15,17 @@ export interface UserData {
       distonia: string;
       avanti: string;
       indietro: string;
+      dinamica: string;
+      profilo?: {
+        famiglia: string;
+        referente: string;
+        origine: string;
+        stile: string;
+        relazioni: string;
+        polarita: string;
+        meccanismo: string;
+        orientamento: string;
+      };
     };
   };
   testInduttore: {

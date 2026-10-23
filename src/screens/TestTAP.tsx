@@ -4,7 +4,7 @@ import { useApiKey } from '../contexts/ApiKeyContext';
 import CameraView from '../components/CameraView';
 import { AdvancedVoiceService } from '../services/AdvancedVoiceService';
 import TestControls from '../components/TestControls';
-import { SYMBOLS_CONFIG, computeTapDiagnosis, SymbolType, SymbolReaction } from '../utils/tapEngine';
+import { SYMBOLS_CONFIG, computeTapDiagnosis, enrichTapDiagnosis, SymbolType, SymbolReaction } from '../utils/tapEngine';
 
 interface ScreenProps {
   setPage: (page: number) => void;
@@ -147,7 +147,7 @@ export const TestTAP: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }) =>
     }
 
     // Finished all symbols - compute diagnosis with validation
-    const diagnosis = computeTapDiagnosis(currentResults, genere);
+    const diagnosis = enrichTapDiagnosis(computeTapDiagnosis(currentResults, genere));
 
     if (!diagnosis.isValid) {
       setStatus('WAITING_CALIBRATION');
@@ -171,11 +171,12 @@ export const TestTAP: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }) =>
     setStatus('SUCCESS');
     setMessage(`Test T.A.P. Completato! Tipologia rilevata: ${diagnosis.tipologia}`);
     try {
-      await voiceService.speak(`Test T.A.P. completato con successo. La tua tipologia analogica è ${diagnosis.tipologia}. Premi il pulsante per proseguire.`);
+      const profile = diagnosis.profilo;
+      await voiceService.speak(`Test T.A.P. completato con successo. La tua tipologia analogica è ${diagnosis.tipologia}. ${profile?.famiglia}. ${profile?.polarita}. ${profile?.stile} ${profile?.orientamento} Premi il pulsante per proseguire.`);
     } catch { /* ignore */ }
   };
 
-  const diagnosis = computeTapDiagnosis(results, genere);
+  const diagnosis = enrichTapDiagnosis(computeTapDiagnosis(results, genere));
 
   const handleProsegui = () => {
     try { voiceService.cancel(); } catch { /* ignore */ }
@@ -292,6 +293,16 @@ export const TestTAP: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }) =>
           <h4 className="text-xs uppercase tracking-widest text-indigo-300 font-bold mb-1">Diagnosi T.A.P. Rilevata</h4>
           <p className="text-xl font-serif font-bold text-white mb-2">{diagnosis.tipologia}</p>
           {diagnosis.distonia && <p className="text-sm text-indigo-200">Distonia: {diagnosis.distonia}</p>}
+          {diagnosis.profilo && (
+            <div className="mt-5 grid gap-3 text-left sm:grid-cols-2">
+              <div className="rounded-xl bg-black/20 p-3"><p className="text-[10px] uppercase tracking-widest text-indigo-300">Famiglia e referente</p><p className="text-sm text-white">{diagnosis.profilo.famiglia} — {diagnosis.profilo.referente}</p></div>
+              <div className="rounded-xl bg-black/20 p-3"><p className="text-[10px] uppercase tracking-widest text-indigo-300">Polarità</p><p className="text-sm text-white">{diagnosis.profilo.polarita}</p></div>
+              <div className="rounded-xl bg-black/20 p-3 sm:col-span-2"><p className="text-[10px] uppercase tracking-widest text-indigo-300">Origine interpretativa</p><p className="text-sm text-indigo-100">{diagnosis.profilo.origine}</p></div>
+              <div className="rounded-xl bg-black/20 p-3 sm:col-span-2"><p className="text-[10px] uppercase tracking-widest text-indigo-300">Stile comportamentale</p><p className="text-sm text-indigo-100">{diagnosis.profilo.stile}</p></div>
+              <div className="rounded-xl bg-black/20 p-3 sm:col-span-2"><p className="text-[10px] uppercase tracking-widest text-indigo-300">Dinamica relazionale</p><p className="text-sm text-indigo-100">{diagnosis.profilo.relazioni}</p></div>
+              <div className="rounded-xl bg-black/20 p-3 sm:col-span-2"><p className="text-[10px] uppercase tracking-widest text-indigo-300">Meccanismo e orientamento</p><p className="text-sm text-indigo-100">{diagnosis.profilo.meccanismo} {diagnosis.profilo.orientamento}</p></div>
+            </div>
+          )}
         </div>
       )}
 

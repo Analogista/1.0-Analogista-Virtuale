@@ -48,7 +48,79 @@ export interface TapDiagnosisResult {
   avanti: string;
   indietro: string;
   dinamica: string;
+  profilo?: TapProfile;
 }
+
+export interface TapProfile {
+  famiglia: string;
+  referente: string;
+  origine: string;
+  stile: string;
+  relazioni: string;
+  polarita: string;
+  meccanismo: string;
+  orientamento: string;
+}
+
+export const enrichTapDiagnosis = (diagnosis: TapDiagnosisResult): TapDiagnosisResult => {
+  if (!diagnosis.isValid) return diagnosis;
+
+  const label = diagnosis.tipologia.toLowerCase();
+  const distonia = diagnosis.distonia.toLowerCase();
+  const isEgo = label.includes('ego');
+  const isFather = label.includes('padre');
+  const isMother = label.includes('madre');
+  const isMaleEgo = label.includes('ego-maschio');
+  const isFemaleEgo = label.includes('ego-femmina');
+  const isBalanced = distonia.includes('equilibrio');
+  const isBeing = distonia.includes('essere');
+
+  let referente = 'Cerchio (Sé / identità)';
+  let origine = 'Struttura integrata del rapporto con sé e con le figure genitoriali.';
+  let stile = 'Approccio centrato sulla propria sensibilità simbolica e sulla ricerca di affidabilità.';
+  let relazioni = 'Ricerca di considerazione, affidabilità e complementarità nella comunicazione.';
+
+  if (isMaleEgo) {
+    referente = 'Cerchio (Ego-Maschio)';
+    origine = 'Ex-conflittualità materna: l’Ego assume il sesso del genitore ex-buono, il padre.';
+    stile = 'Iper-logico, prescrittivo e didascalico; dispensatore di consigli e soluzioni esterne.';
+    relazioni = 'Agonismo e competizione con le figure maschili; ricerca di affidabilità e dimostrazione del proprio valore.';
+  } else if (isFemaleEgo) {
+    referente = 'Cerchio (Ego-Femmina)';
+    origine = 'Ex-conflittualità paterna: l’Ego assume la qualità del genitore ex-buono, la madre.';
+    stile = 'Attento all’immagine, all’estetica, alla leadership e al giudizio altrui.';
+    relazioni = 'Agonismo con le figure femminili e attenzione ai limiti o all’inaffidabilità di partner e collaboratori.';
+  } else if (isFather) {
+    referente = 'Asta (Padre / autorità)';
+    origine = 'Conflitto primario legato alla figura paterna, all’autorità o alle regole.';
+    stile = 'Accusatorio, colpevolizzante, impositivo e critico; tende a indicare limiti e difetti.';
+    relazioni = 'Confronto diretto, schiettezza e possibile marcata gelosia; indica la strada senza sempre offrire la soluzione.';
+  } else if (isMother) {
+    referente = 'Triangolo (Madre / accoglienza)';
+    origine = 'Conflitto primario legato alla figura materna o alle figure femminili.';
+    stile = 'Protettivo, avvolgente e premuroso; tende a proporsi direttamente come soluzione ai problemi dell’altro.';
+    relazioni = 'Apparente dolcezza e condizionamento affettivo; sensibilità al timore dell’abbandono e della disistima.';
+  } else if (isEgo) {
+    referente = 'Cerchio (Sé / triade)';
+    origine = 'Struttura triadica con integrazione del rapporto con sé e con le figure genitoriali.';
+    stile = 'Indicativo e prescrittivo, orientato a divieti, obblighi o soluzioni esterne.';
+    relazioni = 'Ricerca di affidabilità e superamento dell’antagonismo attraverso una maggiore integrazione.';
+  }
+
+  return {
+    ...diagnosis,
+    profilo: {
+      famiglia: isEgo ? 'Tipologia egocentrica' : 'Tipologia genitoriale',
+      referente,
+      origine,
+      stile,
+      relazioni,
+      polarita: isBalanced ? 'Equilibrio triadico' : isBeing ? 'Distonia dell’Essere (Yin / passivo / role down)' : 'Distonia dell’Avere (Yang / attivo / role up)',
+      meccanismo: isBalanced ? 'Integrazione e complementarità tra i referenti.' : isBeing ? 'Tendenza auto-attributiva: responsabilità e colpa vengono rivolte verso di sé.' : 'Tendenza etero-attributiva: responsabilità e colpa vengono rivolte verso l’esterno o l’antagonista.',
+      orientamento: isBalanced ? 'Ricerca di equilibrio e integrazione.' : isBeing ? 'Orientamento al desiderio e alla conquista del sogno, con tempi graduali.' : 'Orientamento al possesso e al soddisfacimento del bisogno, con passaggio rapido all’azione.'
+    }
+  };
+};
 
 /**
  * Motore Diagnostico T.A.P. (Tipologia Analogica della Personalità) completo
