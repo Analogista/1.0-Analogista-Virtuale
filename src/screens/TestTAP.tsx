@@ -29,6 +29,7 @@ export const TestTAP: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }) =>
   });
   const [message, setMessage] = useState('Posizionati di fronte alla webcam, seleziona il tuo genere e avvia la calibrazione.');
   const [isCameraReady, setIsCameraReady] = useState(false);
+  const [cameraServiceId, setCameraServiceId] = useState<string | null>(null);
 
   const cameraRef = useRef<any>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -105,9 +106,7 @@ export const TestTAP: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }) =>
 
       const movementListener = (e: any) => {
         const { serviceId, direction } = e.detail;
-        if (videoRef.current && serviceId && videoRef.current.dataset && videoRef.current.dataset.serviceId) {
-          // opzionale controllo serviceId
-        }
+        if (cameraServiceId && serviceId !== cameraServiceId) return;
         if (direction === 'forward') forwardCount++;
         if (direction === 'backward') backwardCount++;
         const dirLabel = direction === 'forward' ? 'SÌ (In avanti)' : 'NO (All\'indietro)';
@@ -228,7 +227,7 @@ export const TestTAP: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }) =>
       {/* Webcam View con Overlay del Simbolo integrato */}
       <div className="mb-6">
          <div className="relative rounded-2xl overflow-hidden shadow-2xl border-4 border-gray-800 bg-black">
-            <CameraView ref={cameraRef} videoRef={videoRef} onReady={handleCameraReady} onCalibrated={handleCalibrated} />
+            <CameraView ref={cameraRef} videoRef={videoRef} onReady={handleCameraReady} onServiceId={setCameraServiceId} onCalibrated={handleCalibrated} />
 
             {/* Header / Badge del simbolo corrente all'interno della webcam */}
             <div className="absolute top-4 left-4 right-4 flex justify-between items-center pointer-events-none z-30">

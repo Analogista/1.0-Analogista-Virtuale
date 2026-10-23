@@ -8,7 +8,7 @@ export interface UserData {
   genere: 'MASCHIO' | 'FEMMINA' | '';
   problema: string;
   testTAP?: {
-    results: Record<'asta' | 'cerchio' | 'triangolo', 'SI' | 'NO' | 'NEUTRO' | ''>;
+    results: Record<'asta' | 'cerchio' | 'triangolo', 'SI' | 'NO' | 'NEUTRO' | 'NON_RILEVATO' | ''>;
     diagnosis: {
       isValid: boolean;
       tipologia: string;

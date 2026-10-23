@@ -7,90 +7,87 @@ export class MotionDetectionService {
     private isDetecting = false;
     private animationFrameId: number | null = null;
 
-    // Parametri Pro V2 (INDEROGABILI)
-    private smoothingFactor = 0.8; // EMA
+    // Parametri Pro V2: mantenuti compatibili con il comportamento esistente.
+    private smoothingFactor = 0.8;
     private currentSmoothedDepth: number | null = null;
     private neutralDepth = 0;
-    private hysteresisFactor = 0.4; // 40%
-    private audioDebounce = 600; // ms
+    private hysteresisFactor = 0.4;
+    private audioDebounce = 600;
     private lastAudioTrigger = 0;
-    private sensitivity = 0.015; // Default Pro V2 sensitivity
-    
-    // Last detection to handle hysteresis
+    private sensitivity = 0.015;
+
+    // Calibrazione robusta.
+    private isCalibrating = false;
+    private calibrationSamples: number[] = [];
+    private calibrationDeadline = 0;
+    private calibrationResolve: ((success: boolean) => void) | null = null;
+    private readonly minimumCalibrationSamples = 8;
+    private readonly maximumCalibrationStandardDeviation = 0.012;
+
     private lastResult: 'forward' | 'backward' | 'none' = 'none';
 
-    // Multi-sample calibration & stability check
-    private isCollectingCalibration = false;
-    private calibrationSamples: number[] = [];
-
-    async initialize(videoElement: HTMLVideoElement) {
+    async initialize(videoElement: HTMLVideoElement): Promise<boolean> {
         this.video = videoElement;
-        
+
         try {
             const vision = await FilesetResolver.forVisionTasks(
-                "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm"
+                "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm"
             );
-            
-            // Try GPU delegate first, with automatic fallback to CPU on Android/failure
+            const options = {
+                baseOptions: {
+                    modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+                    delegate: "GPU" as const
+                },
+                runningMode: "VIDEO" as const,
+                numPoses: 1
+            };
+
             try {
+                this.poseLandmarker = await PoseLandmarker.createFromOptions(vision, options);
+            } catch (gpuError) {
+                console.warn("Delegate GPU non disponibile, provo CPU:", gpuError);
                 this.poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
-                    baseOptions: {
-                        modelAssetPath: `https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task`,
-                        delegate: "GPU"
-                    },
-                    runningMode: "VIDEO",
-                    numPoses: 1
+                    ...options,
+                    baseOptions: { ...options.baseOptions, delegate: "CPU" as const }
                 });
-                console.log(`✅ MediaPipe PoseLandmarker GPU Inizializzato (ID: ${this.id})`);
-            } catch (gpuErr) {
-                console.warn("⚠️ GPU delegate non disponibile, fallback automatico su CPU:", gpuErr);
-                this.poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
-                    baseOptions: {
-                        modelAssetPath: `https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task`,
-                        delegate: "CPU"
-                    },
-                    runningMode: "VIDEO",
-                    numPoses: 1
-                });
-                console.log(`✅ MediaPipe PoseLandmarker CPU Fallback Inizializzato (ID: ${this.id})`);
             }
+
+            console.log(`MediaPipe PoseLandmarker inizializzato (ID: ${this.id})`);
+            return true;
         } catch (error) {
-            console.error("❌ Errore critico inizializzazione MediaPipe:", error);
+            console.error("Errore inizializzazione MediaPipe:", error);
+            this.poseLandmarker = null;
+            return false;
         }
     }
 
     setSensitivity(value: number) {
-        this.sensitivity = 0.05 - (value / 100) * 0.045;
-        console.log(`Sensibilità Pro V2: ${value}% (Valore: ${this.sensitivity.toFixed(4)})`);
+        const normalized = Math.max(0, Math.min(100, value));
+        this.sensitivity = 0.05 - (normalized / 100) * 0.045;
     }
 
-    startCalibrationSampling() {
-        this.calibrationSamples = [];
-        this.isCollectingCalibration = true;
-        console.log("🎯 Inizio campionamento calibrazione multi-frame...");
-    }
-
+    /** Compatibilità con le schermate esistenti: la calibrazione normale usa calibrateFromSamples. */
     calibrate() {
-        this.isCollectingCalibration = false;
-        if (this.calibrationSamples.length > 0) {
-            // Calcolo media dei campioni
-            const sum = this.calibrationSamples.reduce((a, b) => a + b, 0);
-            const avg = sum / this.calibrationSamples.length;
-
-            // Controllo stabilità (Deviazione Standard)
-            const variance = this.calibrationSamples.reduce((acc, val) => acc + Math.pow(val - avg, 2), 0) / this.calibrationSamples.length;
-            const stdev = Math.sqrt(variance);
-
-            this.neutralDepth = avg;
-            console.log(`✅ Calibrazione multi-campione completata. Campioni: ${this.calibrationSamples.length}, Neutral: ${this.neutralDepth.toFixed(4)}, StDev (Stabilità): ${stdev.toFixed(4)}`);
-            
-            if (stdev > 0.03) {
-                console.warn("⚠️ Rilevato movimento elevato durante la calibrazione. Si consiglia di rimanere più immobili.");
-            }
-        } else if (this.currentSmoothedDepth !== null) {
+        if (this.currentSmoothedDepth !== null) {
             this.neutralDepth = this.currentSmoothedDepth;
-            console.log("✅ Calibrazione singola fallback completata. Neutral:", this.neutralDepth);
         }
+    }
+
+    async calibrateFromSamples(durationMs = 1500): Promise<boolean> {
+        if (!this.poseLandmarker || !this.video) return false;
+
+        this.stopDetection();
+        this.isCalibrating = true;
+        this.calibrationSamples = [];
+        this.calibrationDeadline = performance.now() + durationMs;
+        this.currentSmoothedDepth = null;
+        this.lastResult = 'none';
+
+        return new Promise(resolve => {
+            this.calibrationResolve = resolve;
+            this.isDetecting = true;
+            this.detect();
+        });
     }
 
     startDetection() {
@@ -103,33 +100,73 @@ export class MotionDetectionService {
 
     stopDetection() {
         this.isDetecting = false;
-        this.isCollectingCalibration = false;
-        if (this.animationFrameId) {
+        if (this.animationFrameId !== null) {
             cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
         }
     }
 
-    private calculateDepth(landmarks: any): number {
+    private calculateDepth(landmarks: any[]): number | null {
         const nose = landmarks[0];
         const leftShoulder = landmarks[11];
         const rightShoulder = landmarks[12];
+        if (!nose || !leftShoulder || !rightShoulder) return null;
 
-        if (!nose || !leftShoulder || !rightShoulder) return 0;
+        const visibility = [nose, leftShoulder, rightShoulder]
+            .map(point => typeof point.visibility === 'number' ? point.visibility : 1);
+        if (visibility.some(value => value < 0.5)) return null;
 
         const midShoulderX = (leftShoulder.x + rightShoulder.x) / 2;
         const midShoulderY = (leftShoulder.y + rightShoulder.y) / 2;
-
-        const shoulderWidth = Math.sqrt(
-            Math.pow(leftShoulder.x - rightShoulder.x, 2) + 
-            Math.pow(leftShoulder.y - rightShoulder.y, 2)
+        const shoulderWidth = Math.hypot(
+            leftShoulder.x - rightShoulder.x,
+            leftShoulder.y - rightShoulder.y
         );
-        
-        const noseToSpineDist = Math.sqrt(
-            Math.pow(nose.x - midShoulderX, 2) + 
-            Math.pow(nose.y - midShoulderY, 2)
+        const noseToSpineDist = Math.hypot(
+            nose.x - midShoulderX,
+            nose.y - midShoulderY
         );
 
         return (shoulderWidth * 0.7) + (noseToSpineDist * 0.3);
+    }
+
+    private standardDeviation(values: number[]): number {
+        if (values.length === 0) return Number.POSITIVE_INFINITY;
+        const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
+        const variance = values.reduce((sum, value) => sum + ((value - mean) ** 2), 0) / values.length;
+        return Math.sqrt(variance);
+    }
+
+    private finishCalibration(): void {
+        const samples = [...this.calibrationSamples];
+        const standardDeviation = this.standardDeviation(samples);
+        const success = samples.length >= this.minimumCalibrationSamples
+            && Number.isFinite(standardDeviation)
+            && standardDeviation <= this.maximumCalibrationStandardDeviation;
+
+        if (success) {
+            const ordered = samples.sort((a, b) => a - b);
+            const middle = Math.floor(ordered.length / 2);
+            this.neutralDepth = ordered.length % 2 === 0
+                ? (ordered[middle - 1] + ordered[middle]) / 2
+                : ordered[middle];
+            this.currentSmoothedDepth = this.neutralDepth;
+            console.log("Calibrazione completata", {
+                samples: ordered.length,
+                standardDeviation,
+                neutralDepth: this.neutralDepth
+            });
+        } else {
+            console.warn("Calibrazione non stabile", {
+                samples: samples.length,
+                standardDeviation
+            });
+        }
+
+        this.isCalibrating = false;
+        const resolveCalibration = this.calibrationResolve;
+        this.calibrationResolve = null;
+        resolveCalibration?.(success);
     }
 
     private detect = () => {
@@ -137,26 +174,25 @@ export class MotionDetectionService {
 
         const startTimeMs = performance.now();
         const results = this.poseLandmarker.detectForVideo(this.video, startTimeMs);
+        const landmarks = results.landmarks?.[0];
+        const rawDepth = landmarks ? this.calculateDepth(landmarks) : null;
 
-        if (results.landmarks && results.landmarks.length > 0) {
-            const rawDepth = this.calculateDepth(results.landmarks[0]);
-            
-            if (this.currentSmoothedDepth === null) {
-                this.currentSmoothedDepth = rawDepth;
-            } else {
-                this.currentSmoothedDepth = (this.currentSmoothedDepth * this.smoothingFactor) + (rawDepth * (1 - this.smoothingFactor));
-            }
+        if (rawDepth !== null) {
+            this.currentSmoothedDepth = this.currentSmoothedDepth === null
+                ? rawDepth
+                : (this.currentSmoothedDepth * this.smoothingFactor) + (rawDepth * (1 - this.smoothingFactor));
 
-            // Raccogli campioni per la calibrazione se attivo
-            if (this.isCollectingCalibration) {
+            if (this.isCalibrating) {
                 this.calibrationSamples.push(this.currentSmoothedDepth);
+                if (performance.now() >= this.calibrationDeadline) this.finishCalibration();
+                this.animationFrameId = requestAnimationFrame(this.detect);
+                return;
             }
 
             const offset = this.currentSmoothedDepth - this.neutralDepth;
             const threshold = this.sensitivity;
             const returnThreshold = threshold * this.hysteresisFactor;
-
-            const currentResult: 'forward' | 'backward' | 'none' = 
+            const currentResult: 'forward' | 'backward' | 'none' =
                 offset > threshold ? 'forward' :
                 offset < -threshold ? 'backward' :
                 Math.abs(offset) < returnThreshold ? 'none' :
@@ -169,24 +205,17 @@ export class MotionDetectionService {
                     detail: { serviceId: this.id, direction: currentResult, intensity: Math.abs(offset) }
                 }));
             }
-
             this.lastResult = currentResult;
 
             window.dispatchEvent(new CustomEvent('depthUpdate', {
-                detail: { 
-                    serviceId: this.id,
-                    depth: this.currentSmoothedDepth, 
-                    delta: offset, 
-                    neutral: this.neutralDepth,
-                    threshold
-                }
+                detail: { serviceId: this.id, depth: this.currentSmoothedDepth, delta: offset, neutral: this.neutralDepth, threshold }
             }));
 
             window.dispatchEvent(new CustomEvent('landmarksProcessed', {
-                detail: { serviceId: this.id, landmarks: results.landmarks[0] }
+                detail: { serviceId: this.id, landmarks }
             }));
-            
-            const nose = results.landmarks[0][0];
+
+            const nose = landmarks[0];
             if (nose) {
                 window.dispatchEvent(new CustomEvent('movementCenterUpdate', {
                     detail: { serviceId: this.id, center: { x: nose.x * 100, y: nose.y * 100 } }
@@ -199,5 +228,5 @@ export class MotionDetectionService {
         }
 
         this.animationFrameId = requestAnimationFrame(this.detect);
-    }
+    };
 }
