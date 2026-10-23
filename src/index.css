@@ -56,19 +56,17 @@
 
 @keyframes symbolAdvanceOnly {
   0% {
-    transform: perspective(800px) translateZ(-500px) scale(0.12);
+    transform: perspective(1000px) translate3d(0, 0, -500px) scale(0.12);
     opacity: 0.2;
-    filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.1));
   }
   100% {
-    transform: perspective(800px) translateZ(280px) scale(1.6);
+    transform: perspective(1000px) translate3d(0, 0, 280px) scale(1.6);
     opacity: 1;
-    filter: drop-shadow(0 0 40px rgba(255, 255, 255, 0.95));
   }
 }
 
 .animate-symbol-zoom-slow {
-  animation: symbolAdvanceOnly 6s cubic-bezier(0.25, 0.1, 0.25, 1) 2 forwards;
-  will-change: transform, opacity, filter;
+  animation: symbolAdvanceOnly 6s cubic-bezier(0.33, 0, 0.67, 1) 2 forwards;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
 }
-

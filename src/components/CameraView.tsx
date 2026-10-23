@@ -6,6 +6,7 @@ interface CameraViewProps {
   videoRef: React.RefObject<HTMLVideoElement>;
   onReady?: () => void;
   onServiceId?: (serviceId: string) => void;
+  showSilhouette?: boolean;
   onError?: (error: string) => void;
   onCalibrated?: () => void;
   sensitivity?: number;
@@ -16,7 +17,7 @@ export interface CameraViewRef {
   startCalibration: () => void;
 }
 
-const CameraView = React.forwardRef<CameraViewRef, CameraViewProps>(({ videoRef, onReady, onServiceId, onError, onCalibrated, sensitivity = 75, onVoiceGuide }, ref) => {
+const CameraView = React.forwardRef<CameraViewRef, CameraViewProps>(({ videoRef, onReady, onServiceId, showSilhouette = true, onError, onCalibrated, sensitivity = 75, onVoiceGuide }, ref) => {
   const [error, setError] = useState<string | null>(null);
   const [detectedResult, setDetectedResult] = useState<'SI' | 'NO' | null>(null);
   const [depthInfo, setDepthInfo] = useState({ delta: 0, threshold: 0.05 });
@@ -211,7 +212,7 @@ const CameraView = React.forwardRef<CameraViewRef, CameraViewProps>(({ videoRef,
       <div className="absolute inset-0 w-full h-full">
         <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover transform -scale-x-100 grayscale-[20%] brightness-110" />
         <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-20 transform -scale-x-100" />
-        <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10">
+        {showSilhouette && <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10">
           <img src="/assets/sagoma-removebg-preview.webp" alt="Guida Silhouette" className="h-[95%] w-auto object-contain opacity-80 grayscale brightness-125"
             onError={(e) => {
               const parent = e.currentTarget.parentElement;
@@ -225,7 +226,7 @@ const CameraView = React.forwardRef<CameraViewRef, CameraViewProps>(({ videoRef,
           <svg id="silhouette-fallback" viewBox="0 0 200 300" className="h-[90%] w-auto hidden opacity-30">
             <path d="M100,50 C80,50 70,70 70,90 C70,110 80,130 100,130 C120,130 130,110 130,90 C130,70 120,50 100,50 M70,140 C40,140 20,180 20,220 L20,300 L180,300 L180,220 C180,180 160,140 130,140 L70,140" fill="none" stroke="white" strokeWidth="2" strokeDasharray="5,5" />
           </svg>
-        </div>
+        </div>}
       </div>
 
       <div className="absolute top-6 left-6 z-30 flex items-center gap-2">

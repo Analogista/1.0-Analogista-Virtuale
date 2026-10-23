@@ -227,7 +227,7 @@ export const TestTAP: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }) =>
       {/* Webcam View con Overlay del Simbolo integrato */}
       <div className="mb-6">
          <div className="relative rounded-2xl overflow-hidden shadow-2xl border-4 border-gray-800 bg-black">
-            <CameraView ref={cameraRef} videoRef={videoRef} onReady={handleCameraReady} onServiceId={setCameraServiceId} onCalibrated={handleCalibrated} />
+            <CameraView ref={cameraRef} videoRef={videoRef} showSilhouette={false} onReady={handleCameraReady} onServiceId={setCameraServiceId} onCalibrated={handleCalibrated} />
 
             {/* Header / Badge del simbolo corrente all'interno della webcam */}
             <div className="absolute top-4 left-4 right-4 flex justify-between items-center pointer-events-none z-30">
@@ -242,11 +242,11 @@ export const TestTAP: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }) =>
             {/* Overlay del simbolo al centro della Webcam durante lo zoom */}
             {showOverlayOnCam && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-                <div className={`flex items-center justify-center transition-transform duration-300 ${isZooming ? 'animate-symbol-zoom-slow' : 'opacity-30 scale-75'}`}>
-                  <div className="bg-black/45 p-8 rounded-3xl backdrop-blur-[2px] border border-white/10 shadow-2xl">
-                    <div className="text-white text-9xl font-black font-serif drop-shadow-[0_0_40px_rgba(255,255,255,0.95)]">
-                      {SYMBOLS_CONFIG[currentSymbolKey].glyph}
-                    </div>
+                <div className={`flex items-center justify-center ${isZooming ? 'animate-symbol-zoom-slow' : 'opacity-30 scale-75'}`}>
+                  <div className="p-8 rounded-3xl">
+                    {currentSymbolKey === 'cerchio' && <div className="h-32 w-32 rounded-full bg-black shadow-[0_0_18px_rgba(255,255,255,0.28)]" aria-label="Cerchio pieno" />}
+                    {currentSymbolKey === 'asta' && <div className="h-40 w-12 rounded-sm bg-black shadow-[0_0_18px_rgba(255,255,255,0.28)]" aria-label="Asta piena" />}
+                    {currentSymbolKey === 'triangolo' && <div className="h-0 w-0 border-l-[4.5rem] border-r-[4.5rem] border-b-[8rem] border-l-transparent border-r-transparent border-b-black drop-shadow-[0_0_18px_rgba(255,255,255,0.28)]" aria-label="Triangolo pieno" />}
                   </div>
                 </div>
               </div>
