@@ -14,9 +14,7 @@ import TestInduttore from './TestInduttore';
 import TestNome from './TestNome';
 import TestPuntiDistonici from './TestPuntiDistonici';
 import TestSigilliVincoli from './TestSigilliVincoli';
-import CalcolaTimeLine from './CalcolaTimeLine';
-import TestimoneChiave from './TestimoneChiave';
-import QualeGiorno from './QualeGiorno';
+import IndagineSingola from './IndagineSingola';
 import PercorsoCompleto from './PercorsoCompleto';
 import { FeedbackForm } from '../components/FeedbackForm';
 
@@ -58,9 +56,7 @@ const tests: TestItem[] = [
   { id: 'nome', title: '7) Test Nome', description: 'Il tuo inconscio ti riconosce?', component: TestNome, icon: '🆔' },
   { id: 'puntiDistonici', title: '8) Punti Distonici', description: 'Identifica le aree di disagio.', component: TestPuntiDistonici, icon: '🎯' },
   { id: 'sigilli', title: '9) Sigilli-Vincoli', description: 'Scopri i blocchi emotivi.', component: TestSigilliVincoli, icon: '🔐' },
-  { id: 'timeLine', title: '10) Time Line', description: 'Vai indietro nel tempo.', component: CalcolaTimeLine, icon: '⏳' },
-  { id: 'testimone', title: '11) Testimone Chiave', description: 'Da chi subisti il torto?', component: TestimoneChiave, icon: '🔍' },
-  { id: 'qualeGiorno', title: '12) Quale giorno?', description: 'Individua il giorno esatto.', component: QualeGiorno, icon: '📅' },
+  { id: 'indagineSingola', title: '10–11–12) Indagine completa', description: 'Età, giorno e testimone in un unico ciclo.', component: IndagineSingola, icon: '🧭' },
 ];
 
 const Dashboard: React.FC = () => {

@@ -77,7 +77,9 @@ const TestPuntiDistonici: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }
         }));
         setMessage(finalMessage);
         setStatus('SUCCESS');
-        await voiceService.speak("premi il pulsante qui sotto per proseguire con gli altri test oppure riprova questo test");
+        await voiceService.speak(isWizard
+            ? "premi il pulsante qui sotto per proseguire con gli altri test oppure riprova questo test"
+            : "Il test singolo è completato. Puoi tornare alla schermata dei test o ripetere il test.");
     };
 
     const startTest = async () => {
@@ -99,6 +101,14 @@ const TestPuntiDistonici: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }
             setUserData(prev => ({...prev, puntiDistonici: currentPuntiDistonici}));
 
             const nonSoddisfatti = (Object.keys(currentPuntiDistonici) as PuntoKey[]).filter(k => currentPuntiDistonici[k] === 'NO');
+
+            if (!isWizard) {
+                const presenti = nonSoddisfatti.map(k => puntiMapping[k]);
+                completeTest(presenti.length > 0
+                    ? `Test singolo completato. Punti distonici rilevati: ${presenti.join(', ')}.`
+                    : 'Test singolo completato. Nessun punto distonico rilevato.');
+                return;
+            }
 
             if (nonSoddisfatti.length === 0) {
                 completeTest('Test completato. Nessun punto distonico rilevato!');

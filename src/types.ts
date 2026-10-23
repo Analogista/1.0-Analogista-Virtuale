@@ -66,6 +66,7 @@ export interface UserData {
       timeLine?: boolean;
       testimone?: boolean;
       qualeGiorno?: boolean;
+      indagineSingola?: boolean;
   };
   aiSummary?: string;
   hasContactedMax?: boolean;
