@@ -7,6 +7,16 @@ export interface UserData {
   eta: string;
   genere: 'MASCHIO' | 'FEMMINA' | '';
   problema: string;
+  testTAP?: {
+    results: Record<'asta' | 'cerchio' | 'triangolo', 'SI' | 'NO' | 'NEUTRO' | ''>;
+    diagnosis: {
+      isValid: boolean;
+      tipologia: string;
+      distonia: string;
+      avanti: string;
+      indietro: string;
+    };
+  };
   testInduttore: {
     manoDestra: 'Avanti' | 'Indietro' | '';
     manoSinistra: 'Avanti' | 'Indietro' | '';
@@ -48,6 +58,7 @@ export interface UserData {
       [key: string]: boolean;
       chiSei?: boolean;
       calibrazione?: boolean;
+      tap?: boolean;
       induttore?: boolean;
       nome?: boolean;
       puntiDistonici?: boolean;

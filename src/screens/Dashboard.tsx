@@ -9,6 +9,7 @@ import Introduzione from './Introduzione';
 import LaTecnica from './LaTecnica';
 import ChiSei from './ChiSei';
 import CalibrazioneScreen from './CalibrazioneScreen';
+import TestTAP from './TestTAP';
 import TestInduttore from './TestInduttore';
 import TestNome from './TestNome';
 import TestPuntiDistonici from './TestPuntiDistonici';
@@ -50,6 +51,7 @@ const tests: TestItem[] = [
 
   // Preparation Section
   { id: 'calibrazione', title: '4) Calibrazione', description: 'Prepara il sistema al test.', component: CalibrazioneScreen, icon: '🎯' },
+  { id: 'tap', title: '5) Test T.A.P. (Asta, Cerchio, Triangolo)', description: 'Tipologia Analogica della Personalità', component: TestTAP, icon: '🔺' },
   
   // Investigation Section
   { id: 'induttore', title: '6) Test Induttore', description: 'Istituzionale o Trasgressivo?', component: TestInduttore, icon: '👋' },
