@@ -18,13 +18,13 @@ export const TestTAP: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }) =>
   const { userData, setUserData } = useUser();
   const { apiKey } = useApiKey();
   const [status, setStatus] = useState<TestStatus>('WAITING_CALIBRATION');
-  const [currentSymbolKey, setCurrentSymbolKey] = useState<SymbolType>('asta');
+  const [currentSymbolKey, setCurrentSymbolKey] = useState<SymbolType>('cerchio');
   const [isZooming, setIsZooming] = useState<boolean>(false);
   const [showOverlayOnCam, setShowOverlayOnCam] = useState<boolean>(true);
   const [genere, setGenere] = useState<'MASCHIO' | 'FEMMINA'>(userData.genere === 'FEMMINA' ? 'FEMMINA' : 'MASCHIO');
   const [results, setResults] = useState<Record<SymbolType, SymbolReaction>>({
-    asta: userData.testTAP?.results?.asta || '',
     cerchio: userData.testTAP?.results?.cerchio || '',
+    asta: userData.testTAP?.results?.asta || '',
     triangolo: userData.testTAP?.results?.triangolo || ''
   });
   const [message, setMessage] = useState('Posizionati di fronte alla webcam, seleziona il tuo genere e avvia la calibrazione.');
@@ -44,19 +44,6 @@ export const TestTAP: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }) =>
     };
   }, [voiceService]);
 
-  // Ascolta in tempo reale gli eventi di movimento/oscillazione rilevati dal sistema
-  useEffect(() => {
-    const handleMovementDetected = (event: any) => {
-      const { direction } = event.detail;
-      if (status === 'TESTING_SYMBOL') {
-        const dirLabel = direction === 'forward' ? 'SÌ (In avanti - Gradimento)' : direction === 'backward' ? 'NO (All\'indietro - Rifiuto)' : 'Rilevato';
-        setMessage(`⚡ Oscillazione rilevata per ${SYMBOLS_CONFIG[currentSymbolKey]?.label}: ${dirLabel}`);
-      }
-    };
-    window.addEventListener('movementDetected', handleMovementDetected);
-    return () => window.removeEventListener('movementDetected', handleMovementDetected);
-  }, [status, currentSymbolKey]);
-
   const handleCameraReady = () => {
     if (videoRef.current) {
       voiceService.initializeDetector(videoRef.current);
@@ -66,7 +53,7 @@ export const TestTAP: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }) =>
 
   const startCalibration = async () => {
     setStatus('CALIBRATING');
-    setMessage("Rimani immobile per la calibrazione del sistema analogico...");
+    setMessage("Rimani immobile per la calibrazione del sistema analogico multi-campione...");
     try {
       await voiceService.speak("Mettiti in piedi di fronte alla telecamera, braccia lungo il corpo. Ora calibriamo la tua posizione neutra.");
     } catch { /* ignore */ }
@@ -81,7 +68,7 @@ export const TestTAP: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }) =>
     try { voiceService.cancel(); } catch { /* ignore */ }
     setStatus('WAITING_CALIBRATION');
     setMessage('Premi "Inizia Calibrazione" per ricominciare il test T.A.P.');
-    setResults({ asta: '', cerchio: '', triangolo: '' });
+    setResults({ cerchio: '', asta: '', triangolo: '' });
     setIsZooming(false);
   };
 
@@ -117,7 +104,10 @@ export const TestTAP: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }) =>
       let backwardCount = 0;
 
       const movementListener = (e: any) => {
-        const { direction } = e.detail;
+        const { serviceId, direction } = e.detail;
+        if (videoRef.current && serviceId && videoRef.current.dataset && videoRef.current.dataset.serviceId) {
+          // opzionale controllo serviceId
+        }
         if (direction === 'forward') forwardCount++;
         if (direction === 'backward') backwardCount++;
         const dirLabel = direction === 'forward' ? 'SÌ (In avanti)' : 'NO (All\'indietro)';
@@ -131,24 +121,44 @@ export const TestTAP: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }) =>
 
       window.removeEventListener('movementDetected', movementListener);
 
-      const reaction: SymbolReaction = 
-        forwardCount > backwardCount ? 'SI' :
-        backwardCount > forwardCount ? 'NO' :
-        forwardCount > 0 ? 'SI' :
-        backwardCount > 0 ? 'NO' : 'NEUTRO';
+      // Distinguere rigorosamente NEUTRO, NON_RILEVATO (parità) e SI/NO
+      let reaction: SymbolReaction = 'NEUTRO';
+      if (forwardCount === 0 && backwardCount === 0) {
+        reaction = 'NEUTRO';
+      } else if (forwardCount === backwardCount) {
+        reaction = 'NON_RILEVATO';
+      } else if (forwardCount > backwardCount) {
+        reaction = 'SI';
+      } else {
+        reaction = 'NO';
+      }
 
       currentResults[symKey] = reaction;
       setResults({ ...currentResults });
       setIsZooming(false);
 
-      const reactionLabel = reaction === 'SI' ? 'SÌ (In avanti - Gradimento)' : reaction === 'NO' ? 'NO (All\'indietro - Rifiuto)' : 'Neutro';
+      const reactionLabel = 
+        reaction === 'SI' ? 'SÌ (In avanti - Gradimento)' : 
+        reaction === 'NO' ? 'NO (All\'indietro - Rifiuto)' : 
+        reaction === 'NON_RILEVATO' ? 'NON RILEVATO (Parità/Instabile)' : 'Neutro (Nessuna oscillazione)';
+      
       setMessage(`✅ Registrato per ${conf.label}: ${reactionLabel}`);
 
       await new Promise(res => setTimeout(res, 1500));
     }
 
-    // Finished all symbols
+    // Finished all symbols - compute diagnosis with validation
     const diagnosis = computeTapDiagnosis(currentResults, genere);
+
+    if (!diagnosis.isValid) {
+      setStatus('WAITING_CALIBRATION');
+      setMessage(`⚠️ ${diagnosis.tipologia}: ${diagnosis.distonia}. Si prega di ripetere il test.`);
+      try {
+        await voiceService.speak("Il test non ha prodotto risposte sufficientemente stabili o univoche. Ti invito a ripetere la calibrazione e il test.");
+      } catch { /* ignore */ }
+      return;
+    }
+
     setUserData(prev => ({
       ...prev,
       genere,
@@ -179,7 +189,7 @@ export const TestTAP: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }) =>
     <div className="bg-[#0a0a0c] text-white min-h-screen p-4 sm:p-6 pb-24 relative transition-colors duration-500">
       <div className="flex justify-between items-start mb-6">
         <div>
-          <h2 className="text-2xl font-serif font-black text-cyan-400">{isWizard ? 'TEST T.A.P. (Asta, Cerchio, Triangolo)' : 'TEST T.A.P. (TIPOLOGIA ANALOGICA)'}</h2>
+          <h2 className="text-2xl font-serif font-black text-cyan-400">{isWizard ? 'TEST T.A.P. (Cerchio, Asta, Triangolo)' : 'TEST T.A.P. (TIPOLOGIA ANALOGICA)'}</h2>
           <h3 className="text-sm tracking-widest uppercase font-bold text-gray-400">Analisi degli Archetipi di Stefano Benemeglio</h3>
         </div>
         {!isWizard && (<button onClick={() => setPage(0)} className="text-xs uppercase tracking-widest font-bold text-cyan-500 hover:text-cyan-400">&larr; ESCI</button>)}
@@ -254,7 +264,7 @@ export const TestTAP: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }) =>
         {status === 'CALIBRATING' && (
              <div className="flex items-center space-x-3 bg-cyan-950/20 px-6 py-4 rounded-2xl border border-cyan-500/30 animate-pulse">
                 <span className="w-2.5 h-2.5 bg-cyan-400 rounded-full"></span>
-                <span className="text-cyan-400 font-black uppercase tracking-widest text-sm">CALIBRAZIONE IN CORSO...</span>
+                <span className="text-cyan-400 font-black uppercase tracking-widest text-sm">CALIBRAZIONE MULTI-CAMPIONE IN CORSO...</span>
            </div>
         )}
         {(status === 'WAITING_INTRO' || status === 'TESTING_SYMBOL') && (

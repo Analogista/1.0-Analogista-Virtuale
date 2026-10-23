@@ -91,7 +91,7 @@ const CameraView = React.forwardRef<CameraViewRef, CameraViewProps>(({ videoRef,
     const serviceId = motionService.current.id;
 
     const handleMovement = (event: any) => {
-        if (event.detail.serviceId !== serviceId) return;
+        if (event.detail.serviceId && event.detail.serviceId !== serviceId) return;
         const { direction } = event.detail;
         if (direction === 'forward') {
             setDetectedResult('SI');
@@ -104,12 +104,12 @@ const CameraView = React.forwardRef<CameraViewRef, CameraViewProps>(({ videoRef,
     };
 
     const handleDepth = (event: any) => {
-        if (event.detail.serviceId !== serviceId) return;
+        if (event.detail.serviceId && event.detail.serviceId !== serviceId) return;
         setDepthInfo({ delta: event.detail.delta, threshold: event.detail.threshold });
     };
 
     const handleLandmarks = (event: any) => {
-        if (event.detail.serviceId !== serviceId) return;
+        if (event.detail.serviceId && event.detail.serviceId !== serviceId) return;
         const canvas = canvasRef.current;
         const video = videoRef.current;
         if (!canvas || !video) return;
@@ -164,7 +164,7 @@ const CameraView = React.forwardRef<CameraViewRef, CameraViewProps>(({ videoRef,
   const handleCalibrate = () => {
     if (isCalibrating || !isReady) return;
     setIsCalibrating(true);
-    motionService.current?.stopDetection();
+    motionService.current?.startCalibrationSampling();
     setCountdown(5);
     playCountdownSound(); 
     
@@ -173,7 +173,6 @@ const CameraView = React.forwardRef<CameraViewRef, CameraViewProps>(({ videoRef,
         if (prev <= 1) {
           clearInterval(timer);
           setTimeout(() => {
-            motionService.current?.startDetection();
             motionService.current?.calibrate();
             setIsCalibrating(false);
             playFeedbackSound('positive');
@@ -220,7 +219,7 @@ const CameraView = React.forwardRef<CameraViewRef, CameraViewProps>(({ videoRef,
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#0a0a0c]/80 border border-white/10 backdrop-blur-md">
           <div className={`w-2 h-2 rounded-full ${isCalibrating ? 'bg-amber-400 animate-pulse' : isReady ? 'bg-emerald-400 animate-pulse' : 'bg-red-500'}`} />
           <span className="text-[10px] font-bold text-white/80 font-mono uppercase tracking-wider">
-            {isCalibrating ? `CALIBRAZIONE (${countdown}s)` : isReady ? 'PRONTO' : 'ATTESA'}
+            {isCalibrating ? `CALIBRAZIONE MULTI-CAMPIONE (${countdown}s)` : isReady ? 'PRONTO' : 'ATTESA'}
           </span>
         </div>
       </div>
@@ -239,7 +238,7 @@ const CameraView = React.forwardRef<CameraViewRef, CameraViewProps>(({ videoRef,
 
       {isCalibrating && (
         <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="text-cyan-400 text-xs font-black tracking-[0.5em] mb-8 uppercase animate-pulse">Rimani Immobile</div>
+          <div className="text-cyan-400 text-xs font-black tracking-[0.5em] mb-8 uppercase animate-pulse">Rimani Immobile - Calibrazione in corso</div>
           <div className="text-white text-[15rem] font-black leading-none drop-shadow-[0_0_50px_rgba(0,229,255,0.4)]">{countdown}</div>
         </div>
       )}
@@ -260,14 +259,13 @@ const CameraView = React.forwardRef<CameraViewRef, CameraViewProps>(({ videoRef,
           </div>
         )}
 
-        {/* DESIGN RIMODULATO: Entrambi i bottoni visibili */}
         <div className="flex justify-center gap-3 flex-wrap">
           <button 
             onClick={handleCalibrate}
             disabled={isCalibrating || !isReady}
             className="px-6 py-2.5 bg-white/10 hover:bg-white/20 border border-white/10 disabled:opacity-30 text-white font-mono font-bold text-[10px] tracking-widest uppercase rounded-xl transition-all active:scale-95"
           >
-            {isCalibrating ? 'Calibrazione...' : '▶ AVVIA CALIBRAZIONE'}
+            {isCalibrating ? 'Calibrazione...' : '▶ AVVIA CALIBRAZIONE MULTI-CAMPIONE'}
           </button>
 
           {onVoiceGuide && (

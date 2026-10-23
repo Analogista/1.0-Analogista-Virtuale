@@ -1,5 +1,5 @@
-export type SymbolType = 'asta' | 'cerchio' | 'triangolo';
-export type SymbolReaction = 'SI' | 'NO' | 'NEUTRO' | '';
+export type SymbolType = 'cerchio' | 'asta' | 'triangolo';
+export type SymbolReaction = 'SI' | 'NO' | 'NEUTRO' | 'NON_RILEVATO' | '';
 
 export interface SymbolConfig {
   id: SymbolType;
@@ -12,23 +12,23 @@ export interface SymbolConfig {
 }
 
 export const SYMBOLS_CONFIG: Record<SymbolType, SymbolConfig> = {
-  asta: {
-    id: 'asta',
-    stepNumber: 1,
-    glyph: '|',
-    label: 'ASTA (|)',
-    archetype: 'Archetipo Paterno (|)',
-    description: 'Autorità, Regola, Dovere, Razionalità, Norma, Maschile.',
-    voicePrompt: 'Osserva ora il simbolo dell\'Asta al centro dello schermo mentre avanza lentamente verso di te per 3 volte. Lasciati andare e lascia che il tuo corpo oscilli liberamente in avanti o all\'indietro.'
-  },
   cerchio: {
     id: 'cerchio',
-    stepNumber: 2,
+    stepNumber: 1,
     glyph: 'O',
     label: 'CERCHIO (O)',
     archetype: 'Archetipo dell\'Io / Sé (O)',
     description: 'Egocentrismo, Identità, Autonomia, Centratura personale.',
-    voicePrompt: 'Osserva ora il simbolo del Cerchio mentre avanza lentamente verso di te sullo schermo per 3 volte. Lascia che il tuo corpo risponda oscillando liberamente in avanti o all\'indietro.'
+    voicePrompt: 'Osserva ora il simbolo del Cerchio mentre avanza lentamente verso di te sullo schermo per 2 cicli. Lascia che il tuo corpo risponda oscillando liberamente in avanti o all\'indietro.'
+  },
+  asta: {
+    id: 'asta',
+    stepNumber: 2,
+    glyph: '|',
+    label: 'ASTA (|)',
+    archetype: 'Archetipo Paterno (|)',
+    description: 'Autorità, Regola, Dovere, Razionalità, Norma, Maschile.',
+    voicePrompt: 'Osserva ora il simbolo dell\'Asta al centro dello schermo mentre avanza lentamente verso di te per 2 cicli. Lasciati andare e lascia che il tuo corpo oscilli liberamente in avanti o all\'indietro.'
   },
   triangolo: {
     id: 'triangolo',
@@ -37,7 +37,7 @@ export const SYMBOLS_CONFIG: Record<SymbolType, SymbolConfig> = {
     label: 'TRIANGOLO (Δ)',
     archetype: 'Archetipo Materno (Δ)',
     description: 'Accoglienza, Affettività, Piacere, Emozione, Protezione, Femminile.',
-    voicePrompt: 'Osserva ora il simbolo del Triangolo mentre avanza lentamente verso di te sullo schermo per 3 volte. Lascia che il tuo inconscio risponda oscillando in avanti o all\'indietro.'
+    voicePrompt: 'Osserva ora il simbolo del Triangolo mentre avanza lentamente verso di te sullo schermo per 2 cicli. Lascia che il tuo inconscio risponda oscillando in avanti o all\'indietro.'
   }
 };
 
@@ -62,7 +62,24 @@ export const computeTapDiagnosis = (
   const forwardList: SymbolType[] = [];
   const backwardList: SymbolType[] = [];
 
-  (['asta', 'cerchio', 'triangolo'] as SymbolType[]).forEach(sym => {
+  const symbols: SymbolType[] = ['cerchio', 'asta', 'triangolo'];
+
+  // Verifica che nessun simbolo sia NON_RILEVATO, NEUTRO o vuoto
+  for (const sym of symbols) {
+    const r = results[sym];
+    if (!r || r === 'NON_RILEVATO' || r === 'NEUTRO') {
+      return {
+        isValid: false,
+        tipologia: 'Test Incompleto o Risultato Non Affidabile',
+        distonia: `Il simbolo ${SYMBOLS_CONFIG[sym].label} non ha prodotto una risposta chiara (Rilevato: ${r || 'VUOTO'}). Si prega di ripetere il test.`,
+        avanti: '',
+        indietro: '',
+        dinamica: 'Le Discipline Analogiche richiedono risposte nette (SÌ/NO) per ciascun archetipo senza ambiguità o parità.'
+      };
+    }
+  }
+
+  symbols.forEach(sym => {
     if (results[sym] === 'SI') forwardList.push(sym);
     if (results[sym] === 'NO') backwardList.push(sym);
   });
@@ -70,8 +87,8 @@ export const computeTapDiagnosis = (
   if (forwardList.length !== 1 || backwardList.length === 0) {
     return { 
       isValid: false, 
-      tipologia: 'Incompleta o in attesa di combinazione',
-      distonia: 'Seleziona esattamente 1 simbolo in Avanti (SI) e almeno 1 in Indietro (NO)',
+      tipologia: 'Combinazione non valida',
+      distonia: 'È richiesto esattamente 1 simbolo in Avanti (SI) e almeno 1 in Indietro (NO)',
       avanti: '',
       indietro: '',
       dinamica: ''
@@ -276,7 +293,6 @@ export const computeTapDiagnosis = (
     }
   }
 
-  // Fallback generico se combinazione non codificata
   return { 
     isValid: true, 
     tipologia: `Tipologia T.A.P. (${gender})`, 
