@@ -33,7 +33,7 @@ const TestSigilliVincoli: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }
     const videoRef = useRef<HTMLVideoElement>(null);
     const voiceService = useMemo(() => new AdvancedVoiceService(), []);
 
-    const { puntoDistonicoFinale } = userData;
+    const effectivePunto = puntoDistonicoFinale || 'Famiglia';
 
     useEffect(() => {
         return () => voiceService.cancel();
@@ -48,7 +48,7 @@ const TestSigilliVincoli: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }
 
     const startCalibration = async () => {
         setStatus('CALIBRATING');
-        setMessage("Rimani immobile per la calibrazione...");
+        setMessage("Rimani immobile per la calibrazione multi-campione...");
         await voiceService.speak("stessa posizione come in precedenza, dopo il conto alla rovescia inizieremo il test");
         if (cameraRef.current) {
             cameraRef.current.startCalibration();
@@ -83,17 +83,12 @@ const TestSigilliVincoli: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }
     };
     
     const startTest = async () => {
-        if (!puntoDistonicoFinale) {
-            setMessage("Punto distonico finale non identificato. Torna al test precedente.");
-            return;
-        }
-        
         setStatus('TESTING');
         setResults({});
                 const currentSigilli = { ...userData.sigilli };
 
         try {
-            await voiceService.speak(`Caro inconscio di ${userData.nome}, nel test dei punti distonici presenti nella tua vita, è risultato ${puntoDistonicoFinale}. Adesso scopriamo quali sigilli, complessi, o blocchi, sono presenti in te e causano quel disagio.`);
+            await voiceService.speak(`Caro inconscio di ${userData.nome || 'utente'}, nel test dei punti distonici presenti nella tua vita, è risultato ${effectivePunto}. Adesso scopriamo quali sigilli, complessi, o blocchi, sono presenti in te e causano quel disagio.`);
             
             const sigilliQuestionMapping = {
               colpa: `Caro inconscio, sono i sensi di colpa? Si o No, attendo risposta.`,
@@ -170,8 +165,7 @@ const TestSigilliVincoli: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }
             <VideoAccordion videoId="jTXIaDt9G_M" title="🎥 Video: Cosa sono i Sigilli e i Vincoli?" />
 
             <InfoBox>
-                <p>Posizionati di fronte alla webcam all'interno della sagoma trasparente. Identificheremo i sigilli (blocchi emotivi) legati al tuo punto distonico: <strong>{puntoDistonicoFinale || '(non definito)'}</strong>.</p>
-                {!puntoDistonicoFinale && <p className="text-red-600 font-bold mt-2">Completa prima il Test Punti Distonici!</p>}
+                <p>Posizionati di fronte alla webcam all'interno della sagoma trasparente. Identificheremo i sigilli (blocchi emotivi) legati al punto distonico: <strong>{effectivePunto}</strong>.</p>
             </InfoBox>
 
             <div className="my-6">
@@ -187,7 +181,7 @@ const TestSigilliVincoli: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }
                 {status === 'IDLE' && !isCalibrated && (
                     <button
                         onClick={startCalibration}
-                        disabled={!isCameraReady || !puntoDistonicoFinale}
+                        disabled={!isCameraReady}
                         className="bg-cyan-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-cyan-700 transition duration-300 disabled:bg-gray-400 uppercase tracking-widest"
                     >
                         Inizia Calibrazione
