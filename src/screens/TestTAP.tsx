@@ -172,7 +172,10 @@ export const TestTAP: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }) =>
     setMessage(`Test T.A.P. Completato! Tipologia rilevata: ${diagnosis.tipologia}`);
     try {
       const profile = diagnosis.profilo;
-      await voiceService.speak(`Test T.A.P. completato con successo. La tua tipologia analogica è ${diagnosis.tipologia}. ${profile?.famiglia}. ${profile?.polarita}. ${profile?.stile} ${profile?.orientamento} Premi il pulsante per proseguire.`);
+      const profileSpeech = profile
+        ? ` Famiglia evolutiva: ${profile.famiglia}. Referente simbolico: ${profile.referente}. Polarità: ${profile.polarita}. Origine: ${profile.origine}. Stile comportamentale: ${profile.stile}. Dinamica diagnostica: ${diagnosis.dinamica}. Dinamica relazionale: ${profile.relazioni}. Meccanismo: ${profile.meccanismo}. Orientamento: ${profile.orientamento}.`
+        : '';
+      await voiceService.speak(`Test T.A.P. completato con successo. La tua tipologia analogica è ${diagnosis.tipologia}.${profileSpeech} Premi il pulsante per proseguire.`);
     } catch { /* ignore */ }
   };
 
