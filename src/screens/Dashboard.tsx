@@ -56,7 +56,7 @@ const tests: TestItem[] = [
   { id: 'nome', title: '7) Test Nome', description: 'Il tuo inconscio ti riconosce?', component: TestNome, icon: '🆔' },
   { id: 'puntiDistonici', title: '8) Punti Distonici', description: 'Identifica le aree di disagio.', component: TestPuntiDistonici, icon: '🎯' },
   { id: 'sigilli', title: '9) Sigilli-Vincoli', description: 'Scopri i blocchi emotivi.', component: TestSigilliVincoli, icon: '🔐' },
-  { id: 'indagineSingola', title: '10–11–12) Indagine singola', description: 'Età, giorno e testimone in un unico ciclo.', component: IndagineSingola, icon: '🧭' },
+  { id: 'indagineSingola', title: '10) Indietro nel tempo', description: 'Età, giorno, testimone e reazione in un unico ciclo.', component: IndagineSingola, icon: '🧭' },
 ];
 
 const Dashboard: React.FC = () => {

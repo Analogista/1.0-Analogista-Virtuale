@@ -244,7 +244,7 @@ const IndagineSingola: React.FC<ScreenProps> = ({ setPage }) => {
     <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 pb-24 relative">
       <div className="flex justify-between items-start mb-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">10–11–12) Indagine singola</h2>
+          <h2 className="text-2xl font-bold text-gray-800">10) Indietro nel tempo</h2>
           <h3 className="text-lg font-semibold text-gray-600">Età → Data → Testimone → Reazione</h3>
         </div>
         <button onClick={handleExit} className="text-sm text-blue-600 hover:underline">← Torna ai test</button>
