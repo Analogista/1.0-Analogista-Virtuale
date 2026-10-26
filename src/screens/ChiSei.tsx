@@ -83,7 +83,7 @@ const ChiSei: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }) => {
 
       <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
         <div className="group">
-          <label htmlFor="nome" className={`block text-[10px] font-black tracking-[0.2em] uppercase mb-2 ${isProMode ? 'text-gray-500 group-focus-within:text-cyan-400' : 'text-gray-700'}`}>NOME</label>
+          <label htmlFor="nome" style={{ color: '#fbfbfb' }} className="block text-[10px] font-black tracking-[0.2em] uppercase mb-2">NOME</label>
           <input
             type="text"
             id="nome"
@@ -91,44 +91,35 @@ const ChiSei: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }) => {
             value={userData.nome}
             onChange={handleChange}
             placeholder="IL TUO NOME..."
-            className={`block w-full px-4 py-4 rounded-xl transition-all duration-300 border-2 outline-none ${
-              isProMode 
-                ? 'bg-gray-900/50 border-gray-800 text-white focus:border-cyan-500 focus:bg-gray-900/80 shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)]' 
-                : 'bg-white border-gray-200 text-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
-            }`}
+            style={{ color: '#090909', backgroundColor: '#ffffff' }}
+            className="block w-full px-4 py-4 rounded-xl transition-all duration-300 border-2 outline-none shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)]"
             required
           />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div className="group">
-            <label htmlFor="eta" className={`block text-[10px] font-black tracking-[0.2em] uppercase mb-2 ${isProMode ? 'text-gray-500 group-focus-within:text-cyan-400' : 'text-gray-700'}`}>ETÀ</label>
+            <label htmlFor="eta" style={{ color: '#ffffff' }} className="block text-[10px] font-black tracking-[0.2em] uppercase mb-2">ETÀ</label>
             <input
               type="number"
               id="eta"
               name="eta"
               value={userData.eta}
               onChange={handleChange}
-              className={`block w-full px-4 py-4 rounded-xl transition-all duration-300 border-2 outline-none ${
-                isProMode 
-                  ? 'bg-gray-900/50 border-gray-800 text-white focus:border-cyan-500 focus:bg-gray-900/80 shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)]' 
-                  : 'bg-white border-gray-200 text-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
-              }`}
+              style={{ color: '#070606', backgroundColor: '#ffffff' }}
+              className="block w-full px-4 py-4 rounded-xl transition-all duration-300 border-2 outline-none shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)]"
               required
             />
           </div>
           <div className="group">
-            <label htmlFor="genere" className={`block text-[10px] font-black tracking-[0.2em] uppercase mb-2 ${isProMode ? 'text-gray-500 group-focus-within:text-cyan-400' : 'text-gray-700'}`}>GENERE</label>
+            <label htmlFor="genere" style={{ color: '#ffffff' }} className="block text-[10px] font-black tracking-[0.2em] uppercase mb-2">GENERE</label>
             <select
               id="genere"
               name="genere"
               value={userData.genere}
               onChange={handleChange}
-              className={`block w-full px-4 py-4 rounded-xl transition-all duration-300 border-2 outline-none appearance-none ${
-                isProMode 
-                  ? 'bg-gray-900/50 border-gray-800 text-white focus:border-cyan-500 focus:bg-gray-900/80 shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)]' 
-                  : 'bg-white border-gray-200 text-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
-              }`}
+              style={{ color: '#070606', backgroundColor: '#ffffff' }}
+              className="block w-full px-4 py-4 rounded-xl transition-all duration-300 border-2 outline-none appearance-none shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)]"
               required
             >
               <option value="" disabled>SELEZIONA...</option>
@@ -139,7 +130,7 @@ const ChiSei: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }) => {
         </div>
 
         <div className="group">
-          <label htmlFor="problema" className={`block text-[10px] font-black tracking-[0.2em] uppercase mb-2 ${isProMode ? 'text-gray-500 group-focus-within:text-cyan-400' : 'text-gray-700'}`}>PROBLEMA CHE VUOI RISOLVERE</label>
+          <label htmlFor="problema" style={{ color: '#ffffff' }} className="block text-[10px] font-black tracking-[0.2em] uppercase mb-2">PROBLEMA CHE VUOI RISOLVERE</label>
           <textarea
             id="problema"
             name="problema"
@@ -147,16 +138,13 @@ const ChiSei: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }) => {
             onChange={handleChange}
             rows={4}
             placeholder="Qual è il tuo disagio attuale?"
-            className={`block w-full px-4 py-4 rounded-xl transition-all duration-300 border-2 outline-none ${
-              isProMode 
-                ? 'bg-gray-900/50 border-gray-800 text-white focus:border-cyan-500 focus:bg-gray-900/80 shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)]' 
-                : 'bg-white border-gray-200 text-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
-            }`}
+            style={{ color: '#000000', backgroundColor: '#ffffff' }}
+            className="block w-full px-4 py-4 rounded-xl transition-all duration-300 border-2 outline-none shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)]"
           />
         </div>
 
-        <div className={`p-5 rounded-2xl border ${isProMode ? 'bg-cyan-900/10 border-cyan-900/30' : 'bg-yellow-50 border-yellow-200'}`}>
-          <p className={`text-sm text-center font-medium ${isProMode ? 'text-cyan-300/60' : 'text-yellow-800'}`}>
+        <div className="p-5 rounded-2xl border bg-cyan-900/10 border-cyan-900/30">
+          <p style={{ color: '#d8d8d8' }} className="text-sm text-center font-medium">
              Focalizzati su cosa ti impedisce di sentirti libero/a.
           </p>
         </div>
