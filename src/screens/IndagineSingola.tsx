@@ -25,7 +25,7 @@ const IndagineSingola: React.FC<ScreenProps> = ({ setPage }) => {
   const [status, setStatus] = useState<Status>('IDLE');
   const [message, setMessage] = useState('Premi “Inizia calibrazione” per avviare l’indagine singola.');
   const [isCameraReady, setIsCameraReady] = useState(false);
-  const [summary, setSummary] = useState<{ age?: number; date?: string; witness?: string }>({});
+  const [summary, setSummary] = useState<{ age?: number; date?: string; witness?: string; justification?: string }>({});
   const cameraRef = useRef<any>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const voiceService = useMemo(() => new AdvancedVoiceService(), []);
@@ -54,8 +54,9 @@ const IndagineSingola: React.FC<ScreenProps> = ({ setPage }) => {
   const startCalibration = async () => {
     setStatus('CALIBRATING');
     setMessage('Rimani immobile per la calibrazione...');
-    await voiceService.speak('Mettiti in piedi di fronte alla telecamera, braccia lungo il corpo. Ora calibriamo la tua posizione neutra.');
-    cameraRef.current?.startCalibration();
+    if (cameraRef.current) {
+      cameraRef.current.startCalibration();
+    }
   };
 
   const calculateTimeline = (age: number) => {
@@ -77,16 +78,17 @@ const IndagineSingola: React.FC<ScreenProps> = ({ setPage }) => {
     } as const;
   };
 
-  // Helper with robust retry on NON_RILEVATO to ensure reliable SÌ/NO detection
-  const askWithRetry = async (questionText: string): Promise<'SI' | 'NO'> => {
+  // Strict rule: if detection is not SI or NO, repeat the exact same question until a valid SI/NO is detected
+  const askWithStrictRepeat = async (questionText: string): Promise<'SI' | 'NO'> => {
     while (true) {
+      setMessage(questionText);
       const response: AutomatedResponse = await voiceService.askQuestion(questionText);
       if (response === 'SI' || response === 'NO') {
         return response;
       }
-      setMessage('Movimento non rilevato o incerto. Ripetiamo la domanda...');
-      await voiceService.speak('Non ho rilevato un movimento chiaro. Riproviamo. Oscilla in avanti per Sì o all’indietro per No.');
-      await new Promise(res => setTimeout(res, 800));
+      setMessage(`Risposta non rilevata. Ripeto la domanda...`);
+      await voiceService.speak("Risposta non rilevata. Ripeto la domanda.");
+      await new Promise(res => setTimeout(res, 600));
     }
   };
 
@@ -103,7 +105,7 @@ const IndagineSingola: React.FC<ScreenProps> = ({ setPage }) => {
 
     setStatus('TESTING');
     try {
-      // 1 & 2. Cause event question
+      // 1 & 2. Cause event question intro
       await voiceService.speak(`Caro inconscio di ${nome}, quando accadde quell’evento che, se non fosse accaduto, oggi non avresti il problema: ${problema}?`);
 
       // 3. Age binary search
@@ -111,39 +113,39 @@ const IndagineSingola: React.FC<ScreenProps> = ({ setPage }) => {
       let upper = currentAge;
       while (upper - lower > 1) {
         const midpoint = Math.floor(lower + (upper - lower) / 2);
-        setMessage(`Accadde prima dei ${midpoint} anni?`);
-        const response = await askWithRetry(`L'evento è accaduto prima dei ${midpoint} anni? Sì o no, attendo risposta.`);
-        if (response === 'SI') upper = midpoint;
-        else lower = midpoint;
+        const response = await askWithStrictRepeat(`L'evento è accaduto prima dei ${midpoint} anni? Sì o no, attendo risposta.`);
+        if (response === 'SI') {
+          upper = midpoint;
+        } else {
+          lower = midpoint;
+        }
       }
       const foundAge = upper;
       const timeline = calculateTimeline(foundAge);
-      setSummary({ age: foundAge });
+      setSummary(prev => ({ ...prev, age: foundAge }));
       setUserData(prev => ({
         ...prev,
         timeLine: timeline,
         completedTests: { ...prev.completedTests, timeLine: true }
       }));
-      await voiceService.speak(`Caro inconscio, l'età rilevata è ${foundAge} anni. Ora individuiamo la stagione.`);
+      await voiceService.speak(`Ok, l'evento è accaduto a ${foundAge} anni. Ora cerchiamo la stagione.`);
 
       // 4. Season search
       let foundSeason: SeasonKey | null = null;
       const seasonsList = Object.keys(seasons) as SeasonKey[];
       for (const season of seasonsList) {
-        setMessage(`L'evento accadde in ${season}?`);
-        const response = await askWithRetry(`L'evento accadde in ${season}? Sì o no, attendo risposta.`);
+        const response = await askWithStrictRepeat(`L'evento accadde in ${season}? Sì o no, attendo risposta.`);
         if (response === 'SI') {
           foundSeason = season;
           break;
         }
       }
-      if (!foundSeason) foundSeason = 'Primavera'; // Fallback safely
+      if (!foundSeason) foundSeason = 'Primavera';
 
       // 5. Month search
       let foundMonth: string | null = null;
       for (const month of seasons[foundSeason]) {
-        setMessage(`L'evento accadde nel mese di ${month}?`);
-        const response = await askWithRetry(`L'evento accadde nel mese di ${month}? Sì o no, attendo risposta.`);
+        const response = await askWithStrictRepeat(`L'evento accadde nel mese di ${month}? Sì o no, attendo risposta.`);
         if (response === 'SI') {
           foundMonth = month;
           break;
@@ -156,23 +158,24 @@ const IndagineSingola: React.FC<ScreenProps> = ({ setPage }) => {
       let upperDay = daysInMonth[foundMonth];
       while (upperDay > lowerDay) {
         const midpoint = Math.floor(lowerDay + (upperDay - lowerDay) / 2);
-        setMessage(`Accadde prima del giorno ${midpoint + 1} di ${foundMonth}?`);
-        const response = await askWithRetry(`Accadde prima del giorno ${midpoint + 1} di ${foundMonth}? Sì o no, attendo risposta.`);
-        if (response === 'SI') upperDay = midpoint;
-        else lowerDay = midpoint + 1;
+        const response = await askWithStrictRepeat(`Accadde prima del giorno ${midpoint + 1} di ${foundMonth}? Sì o no, attendo risposta.`);
+        if (response === 'SI') {
+          upperDay = midpoint;
+        } else {
+          lowerDay = midpoint + 1;
+        }
       }
       const foundDate = `${lowerDay} ${foundMonth}`;
-      setSummary({ age: foundAge, date: foundDate });
+      setSummary(prev => ({ ...prev, date: foundDate }));
       setUserData(prev => ({
         ...prev,
         giornoEvento: foundDate,
         completedTests: { ...prev.completedTests, qualeGiorno: true }
       }));
-      await voiceService.speak(`Avevi ${foundAge} anni, nel mese di ${foundMonth}. Ora cerchiamo il testimone.`);
+      await voiceService.speak(`Avevi ${foundAge} anni, il ${foundDate}. Ora cerchiamo il testimone.`);
 
       // 7. Witness gender search
-      setMessage("Era un uomo o una donna?");
-      const maleResponse = await askWithRetry('Era un uomo? Sì o no, attendo risposta.');
+      const maleResponse = await askWithStrictRepeat('Era un uomo? Sì o no, attendo risposta.');
 
       const maleCandidates = ['Tuo padre', 'Tuo nonno', 'Tuo zio', 'Tuo fratello', 'Tuo cugino', 'Un insegnante', 'Un amico'];
       const femaleCandidates = ['Tua madre', 'Tua nonna', 'Tua zia', 'Tua sorella', 'Tua cugina', "Un'insegnante", "Un'amica"];
@@ -182,33 +185,37 @@ const IndagineSingola: React.FC<ScreenProps> = ({ setPage }) => {
       if (maleResponse === 'SI') {
         candidates = maleCandidates;
       } else {
-        const femaleResponse = await askWithRetry('Era una donna? Sì o no, attendo risposta.');
+        const femaleResponse = await askWithStrictRepeat('Era una donna? Sì o no, attendo risposta.');
         candidates = femaleResponse === 'SI' ? femaleCandidates : maleCandidates;
       }
 
       // 8. Witness specific figure search
       let witness = 'Non identificato';
       for (const candidate of candidates) {
-        setMessage(`Era ${candidate}?`);
-        const response = await askWithRetry(`Era ${candidate}? Sì o no, attendo risposta.`);
+        const response = await askWithStrictRepeat(`Era ${candidate}? Sì o no, attendo risposta.`);
         if (response === 'SI') {
           witness = candidate;
           // 9. Specificazione eventuale (Paterno / Materno)
           if (ambiguous.includes(candidate)) {
-            setMessage("Da parte di papà?");
-            const side = await askWithRetry('Da parte di papà? Sì o no, attendo risposta.');
+            const side = await askWithStrictRepeat('Da parte di papà? Sì o no, attendo risposta.');
             witness += side === 'SI' ? ' (Paterno)' : ' (Materno)';
           }
           break;
         }
       }
 
-      setSummary({ age: foundAge, date: foundDate, witness });
+      setSummary(prev => ({ ...prev, witness }));
 
-      // 10. Salvataggio definitivo
+      // 10. Final justification question: "Caro inconscio hai giustificato il torto ricevuto da (testimone) SI o NO, attendo risposta"
+      const justificationResponse = await askWithStrictRepeat(`Caro inconscio, hai giustificato il torto ricevuto da ${witness}? Sì o no, attendo risposta.`);
+      
+      setSummary(prev => ({ ...prev, justification: justificationResponse === 'SI' ? 'Giustificato' : 'Non Giustificato' }));
+
+      // Salvataggio definitivo
       setUserData(prev => ({
         ...prev,
         testimoneChiave: witness,
+        giustificatoTorto: justificationResponse,
         completedTests: {
           ...prev.completedTests,
           timeLine: true,
@@ -219,8 +226,8 @@ const IndagineSingola: React.FC<ScreenProps> = ({ setPage }) => {
       }));
 
       setStatus('SUCCESS');
-      setMessage(`Indagine completata! Età: ${foundAge}; Data: ${foundDate}; Testimone: ${witness}.`);
-      await voiceService.speak(`Indagine completata con successo. Età ${foundAge} anni, il ${foundDate}, testimone: ${witness}. Puoi procedere.`);
+      setMessage(`Indagine completata! Età: ${foundAge}; Data: ${foundDate}; Testimone: ${witness}; Torto: ${justificationResponse === 'SI' ? 'Giustificato' : 'Non Giustificato'}.`);
+      await voiceService.speak(`Indagine completata con successo. Testimone identificato: ${witness}. Torto ${justificationResponse === 'SI' ? 'giustificato' : 'non giustificato'}. Puoi procedere.`);
     } catch (error) {
       console.error(error);
       setStatus('ERROR');
@@ -229,7 +236,7 @@ const IndagineSingola: React.FC<ScreenProps> = ({ setPage }) => {
   };
 
   const handleCalibrated = () => {
-    setIsCalibrated(true);
+    setStatus('TESTING');
     runInvestigation();
   };
 
@@ -238,12 +245,12 @@ const IndagineSingola: React.FC<ScreenProps> = ({ setPage }) => {
       <div className="flex justify-between items-start mb-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">10–11–12) Indagine singola</h2>
-          <h3 className="text-lg font-semibold text-gray-600">Età → Data → Testimone</h3>
+          <h3 className="text-lg font-semibold text-gray-600">Età → Data → Testimone → Reazione</h3>
         </div>
         <button onClick={handleExit} className="text-sm text-blue-600 hover:underline">← Torna ai test</button>
       </div>
       <InfoBox>
-        <p>In questo test unificato indipendente, individueremo in un unico flusso continuo l’età, la data esatta e il testimone chiave dell’evento causa legato al tuo problema.</p>
+        <p>In questo test unificato indipendente, individueremo in un unico flusso continuo l’età, la data esatta, il testimone chiave e se giustificasti il torto ricevuto.</p>
       </InfoBox>
       <div className="my-6">
         <CameraView ref={cameraRef} videoRef={videoRef} onReady={handleCameraReady} onCalibrated={handleCalibrated} />
@@ -253,6 +260,7 @@ const IndagineSingola: React.FC<ScreenProps> = ({ setPage }) => {
         {summary.age && <p className="text-sm mt-2">Età evento: <strong>{summary.age}</strong></p>}
         {summary.date && <p className="text-sm">Data evento: <strong>{summary.date}</strong></p>}
         {summary.witness && <p className="text-sm">Testimone: <strong>{summary.witness}</strong></p>}
+        {summary.justification && <p className="text-sm">Torto: <strong>{summary.justification}</strong></p>}
       </div>
       <div className="mt-6 flex justify-center gap-3">
         {(status === 'IDLE' || status === 'ERROR') && (
