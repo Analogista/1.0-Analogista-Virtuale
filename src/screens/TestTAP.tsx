@@ -121,7 +121,7 @@ export const TestTAP: React.FC<ScreenProps> = ({ setPage, onNext, isWizard }) =>
       window.removeEventListener('movementDetected', movementListener);
 
       // Distinguere rigorosamente NEUTRO, NON_RILEVATO (parità) e SI/NO
-      let reaction: SymbolReaction = 'NEUTRO';
+      let reaction: SymbolReaction;
       if (forwardCount === 0 && backwardCount === 0) {
         reaction = 'NEUTRO';
       } else if (forwardCount === backwardCount) {
